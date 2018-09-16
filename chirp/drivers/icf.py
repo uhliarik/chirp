@@ -400,7 +400,7 @@ def convert_data_line(line):
 
     line = line.strip()
 
-    if len(line) == 38:
+    if len(line) % 8 == 6:
         # Small memory (< 0x10000)
         size = int(line[4:6], 16)
         data = line[6:]

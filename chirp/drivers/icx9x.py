@@ -95,14 +95,14 @@ class ICx9xRadio(icf.IcomCloneModeRadio):
         icf.IcomCloneModeRadio.__init__(self, pipe)
 
     def sync_in(self):
-#        self._get_type()
-#        icf.IcomCloneModeRadio.sync_in(self)
-#        self._mmap[0x1930] = self._isuhf and 1 or 0
-        self._mmap = icf.read_file("/var/tmp/ice90u.icf")[1]
+        self._get_type()
+        icf.IcomCloneModeRadio.sync_in(self)
+        self._mmap[0x1930] = self._isuhf and 1 or 0
+#        self._mmap = icf.read_file("/var/tmp/ice90u.icf")[1]
 
     def sync_out(self):
-#        self._get_type()
-#        icf.IcomCloneModeRadio.sync_out(self)
+        self._get_type()
+        icf.IcomCloneModeRadio.sync_out(self)
         return
 
     def get_memory(self, number):

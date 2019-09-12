@@ -82,7 +82,6 @@ UPLOAD_BLOCKS = [range(0x0000, 0x0110, 8),
 H777_POWER_LEVELS = [chirp_common.PowerLevel("Low", watts=1.00),
                      chirp_common.PowerLevel("High", watts=5.00)]
 VOICE_LIST = ["English", "Chinese"]
-SIDEKEYFUNCTION_LIST = ["Off", "Monitor", "Transmit Power", "Alarm"]
 TIMEOUTTIMER_LIST = ["Off", "30 seconds", "60 seconds", "90 seconds",
                      "120 seconds", "150 seconds", "180 seconds",
                      "210 seconds", "240 seconds", "270 seconds",
@@ -237,6 +236,26 @@ class ArcshellAR6(chirp_common.Alias):
     MODEL = 'AR-6'
 
 
+class GV8SAlias(chirp_common.Alias):
+    VENDOR = 'Greaval'
+    MODEL = 'GV-8S'
+
+
+class GV9SAlias(chirp_common.Alias):
+    VENDOR = 'Greaval'
+    MODEL = 'GV-9S'
+
+
+class A8SAlias(chirp_common.Alias):
+    VENDOR = 'Ansoko'
+    MODEL = 'A-8S'
+
+
+class TenwayTW325Alias(chirp_common.Alias):
+    VENDOR = 'Tenway'
+    MODEL = 'TW-325'
+
+
 @directory.register
 class H777Radio(chirp_common.CloneModeRadio):
     """HST H-777"""
@@ -246,7 +265,9 @@ class H777Radio(chirp_common.CloneModeRadio):
     MODEL = "BF-888"
     BAUD_RATE = 9600
 
-    ALIASES = [ArcshellAR5, ArcshellAR6]
+    ALIASES = [ArcshellAR5, ArcshellAR6, GV8SAlias, GV9SAlias, A8SAlias,
+               TenwayTW325Alias]
+    SIDEKEYFUNCTION_LIST = ["Off", "Monitor", "Transmit Power", "Alarm"]
 
     # This code currently requires that ranges start at 0x0000
     # and are continious. In the original program 0x0388 and 0x03C8
@@ -260,8 +281,8 @@ class H777Radio(chirp_common.CloneModeRadio):
 
     _ranges = [
         (0x0000, 0x0110),
-        (0x02B0, 0x02C0),
         (0x0380, 0x03E0),
+        (0x02B0, 0x02C0),
     ]
     _memsize = 0x03E0
     _has_fm = True
@@ -292,6 +313,8 @@ class H777Radio(chirp_common.CloneModeRadio):
         rf.memory_bounds = (1, 16)
         rf.valid_bands = [(400000000, 470000000)]
         rf.valid_power_levels = H777_POWER_LEVELS
+        rf.valid_tuning_steps = [2.5, 5.0, 6.25, 10.0, 12.5, 15.0, 20.0, 25.0,
+                                 50.0, 100.0]
 
         return rf
 
@@ -498,8 +521,8 @@ class H777Radio(chirp_common.CloneModeRadio):
         if self._has_sidekey:
             rs = RadioSetting("settings2.sidekeyfunction", "Side key function",
                               RadioSettingValueList(
-                                  SIDEKEYFUNCTION_LIST,
-                                  SIDEKEYFUNCTION_LIST[
+                                  self.SIDEKEYFUNCTION_LIST,
+                                  self.SIDEKEYFUNCTION_LIST[
                                       self._memobj.settings2.sidekeyfunction]))
             basic.append(rs)
 
@@ -595,7 +618,7 @@ class ROGA2SRadio(H777Radio):
     VENDOR = "Radioddity"
     MODEL = "GA-2S"
     _has_fm = False
-    _has_sidekey = False
+    SIDEKEYFUNCTION_LIST = ["Off", "Monitor", "Unused", "Alarm"]
 
     @classmethod
     def match_model(cls, filedata, filename):

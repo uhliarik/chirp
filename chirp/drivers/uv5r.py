@@ -280,14 +280,14 @@ struct {
 
 vhf_220_radio = "\x02"
 
-BASETYPE_UV5R = ["BFS", "BFB", "N5R-2", "N5R2", "N5RV", "BTS", "D5R2"]
+BASETYPE_UV5R = ["BFS", "BFB", "N5R-2", "N5R2", "N5RV", "BTS", "D5R2", "B5R2"]
 BASETYPE_F11 = ["USA"]
 BASETYPE_UV82 = ["US2S2", "B82S", "BF82", "N82-2", "N822"]
 BASETYPE_BJ55 = ["BJ55"]  # needed for for the Baojie UV-55 in bjuv55.py
 BASETYPE_UV6 = ["BF1", "UV6"]
 BASETYPE_KT980HP = ["BFP3V3 B"]
 BASETYPE_F8HP = ["BFP3V3 F", "N5R-3", "N5R3", "F5R3", "BFT"]
-BASETYPE_UV82HP = ["N82-3", "N823"]
+BASETYPE_UV82HP = ["N82-3", "N823", "N5R2"]
 BASETYPE_LIST = BASETYPE_UV5R + BASETYPE_F11 + BASETYPE_UV82 + \
     BASETYPE_BJ55 + BASETYPE_UV6 + BASETYPE_KT980HP + \
     BASETYPE_F8HP + BASETYPE_UV82HP
@@ -773,6 +773,7 @@ class BaofengUV5R(chirp_common.CloneModeRadio,
         rf.valid_power_levels = UV5R_POWER_LEVELS
         rf.valid_duplexes = ["", "-", "+", "split", "off"]
         rf.valid_modes = ["FM", "NFM"]
+        rf.valid_tuning_steps = STEPS
 
         normal_bands = [self._vhf_range, self._uhf_range]
         rax_bands = [self._vhf_range, self._220_range]
@@ -1216,7 +1217,7 @@ class BaofengUV5R(chirp_common.CloneModeRadio,
                                   COLOR_LIST, COLOR_LIST[_settings.txled]))
             basic.append(rs)
 
-        if self.MODEL == "UV-82":
+        if isinstance(self, BaofengUV82Radio):
             rs = RadioSetting("roger", "Roger Beep (TX)",
                               RadioSettingValueBoolean(_settings.roger))
             basic.append(rs)
@@ -1259,7 +1260,7 @@ class BaofengUV5R(chirp_common.CloneModeRadio,
                               RadioSettingValueBoolean(_settings.vfomrlock))
             advanced.append(rs)
 
-        if self.MODEL == "UV-82":
+        if isinstance(self, BaofengUV82Radio):
             # this is a UV-82C only feature
             rs = RadioSetting("vfomrlock", "VFO/MR Switching (UV-82C only)",
                               RadioSettingValueBoolean(_settings.vfomrlock))
@@ -1272,7 +1273,7 @@ class BaofengUV5R(chirp_common.CloneModeRadio,
                 RadioSettingValueBoolean(_settings.vfomrlock))
             advanced.append(rs)
 
-        if self.MODEL == "UV-82":
+        if isinstance(self, BaofengUV82Radio):
             # this is an UV-82C only feature
             rs = RadioSetting("singleptt", "Single PTT (UV-82C only)",
                               RadioSettingValueBoolean(_settings.singleptt))
@@ -1759,10 +1760,20 @@ class ROUV5REXAlias(chirp_common.Alias):
     MODEL = "UV-5R EX"
 
 
+class A5RAlias(chirp_common.Alias):
+    VENDOR = "Ansoko"
+    MODEL = "A-5R"
+
+
+class TenwayUV5RPro(chirp_common.Alias):
+    VENDOR = 'Tenway'
+    MODEL = 'UV-5R Pro'
+
+
 @directory.register
 class BaofengUV5RGeneric(BaofengUV5R):
     ALIASES = [UV5XAlias, RT5RAlias, RT5RVAlias, RT5Alias, RH5RAlias,
-               ROUV5REXAlias]
+               ROUV5REXAlias, A5RAlias, TenwayUV5RPro]
 
 
 @directory.register
@@ -1789,6 +1800,19 @@ class BaofengUV82Radio(BaofengUV5R):
     def _is_orig(self):
         # Override this for UV82 to always return False
         return False
+
+
+@directory.register
+class Radioddity82X3Radio(BaofengUV82Radio):
+    VENDOR = "Radioddity"
+    MODEL = "UV-82X3"
+
+    def get_features(self):
+        rf = BaofengUV5R.get_features(self)
+        rf.valid_bands = [self._vhf_range,
+                          (200000000, 260000000),
+                          self._uhf_range]
+        return rf
 
 
 @directory.register

@@ -137,6 +137,10 @@ import struct
 from chirp import chirp_common, bitwise, errors
 from chirp.memmap import MemoryMap
 from chirp.chirp_common import to_MHz
+from chirp.settings import RadioSetting, RadioSettingGroup, \
+    RadioSettingValueInteger, RadioSettingValueList, \
+    RadioSettingValueBoolean, RadioSettingValueString, \
+    RadioSettingValueFloat, InvalidValueError, RadioSettings
 
 POS_BANK = 0
 POS_BANK_INDEX = 1
@@ -294,3 +298,15 @@ def erase_memory(_map, number):
 #    set_used(_map, number, False)
 
     return _map
+
+def get_settings(_map):
+    _squelch = 1
+    basic = RadioSettingGroup("basic", "Basic Settings")
+    group = RadioSettings(basic)
+    rs = RadioSetting("squelch", "Carrier Squelch Level",
+                      RadioSettingValueInteger(0, 9, _squelch))
+    basic.append(rs)
+    return group
+
+def set_settings(_map):
+    pass

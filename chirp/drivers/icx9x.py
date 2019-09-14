@@ -72,7 +72,7 @@ class ICx9xRadio(icf.IcomCloneModeRadio):
 
     def get_features(self):
         rf = chirp_common.RadioFeatures()
-        rf.has_settings = False
+        rf.has_settings = True
         rf.has_name = True
         rf.has_bank = False
         rf.has_bank_index = True
@@ -90,6 +90,17 @@ class ICx9xRadio(icf.IcomCloneModeRadio):
 #        rf.valid_special_chans = sorted(icx9x_ll.ICx9x_SPECIAL.keys())
 
         return rf
+
+    def get_settings(self):
+        try:
+            return icx9x_ll.get_settings(self._mmap)
+        except:
+            import traceback
+            LOG.error("Failed to parse settings: %s", traceback.format_exc())
+            return None
+
+    def set_settings(self, settings):
+        icx9x_ll.get_settings(self._mmap, settings)
 
     def __init__(self, pipe):
         icf.IcomCloneModeRadio.__init__(self, pipe)

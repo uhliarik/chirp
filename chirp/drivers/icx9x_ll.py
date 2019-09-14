@@ -15,6 +15,102 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+ICX9X_MEM_FORMAT = """
+#seekto 0x0010;
+struct {
+  lbcd rx_freq[4];
+  u8 rxtone;
+  lbcd offset[4];
+  u8 txtone;
+  u8 ishighpower:1,
+     iswide:1,
+     dtcsinvt:1,
+     unknown1:1,
+     dtcsinvr:1,
+     unknown2:1,
+     duplex:2;
+  u8 unknown;
+  lbcd tx_freq[4];
+} tx_memory[99];
+
+#seekto 0x0780;
+struct {
+  lbcd lower_vhf[2];
+  lbcd upper_vhf[2];
+  lbcd lower_uhf[2];
+  lbcd upper_uhf[2];
+} limits;
+
+struct vfosettings {
+  lbcd freq[4];
+  u8   rxtone;
+  u8   unknown1;
+  lbcd offset[3];
+  u8   txtone;
+  u8   power:1,
+       bandwidth:1,
+       unknown2:4,
+       duplex:2;
+  u8   step;
+  u8   unknown3[4];
+};
+
+#seekto 0x0790;
+struct {
+  struct vfosettings uhf;
+  struct vfosettings vhf;
+} vfo;
+
+#seekto 0x07C2;
+struct {
+  u8 squelch;
+  u8 vox;
+  u8 timeout;
+  u8 save:1,
+     unknown_1:1,
+     dw:1,
+     ste:1,
+     beep:1,
+     unknown_2:1,
+     bclo:1,
+     ch_flag:1;
+  u8 backlight:2,
+     relaym:1,
+     scanm:1,
+     pri:1,
+     unknown_3:3;
+  u8 unknown_4[3];
+  u8 pri_ch;
+} settings;
+
+#seekto 0x07E0;
+u16 fm_presets[16];
+
+#seekto 0x0810;
+struct {
+  lbcd rx_freq[4];
+  u8 rxtone;
+  lbcd offset[4];
+  u8 txtone;
+  u8 ishighpower:1,
+     iswide:1,
+     dtcsinvt:1,
+     unknown1:1,
+     dtcsinvr:1,
+     unknown2:1,
+     duplex:2;
+  u8 unknown;
+  lbcd tx_freq[4];
+} rx_memory[99];
+
+#seekto 0x1008;
+struct {
+  u8 unknown[8];
+  u8 name[6];
+  u8 pad[2];
+} names[128];
+"""
+
 import struct
 
 from chirp import chirp_common, errors

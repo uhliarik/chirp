@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 Jaroslav Škarvada <jskarvad@redhat.com>
+# Copyright 2018-2019 Jaroslav Škarvada <jskarvad@redhat.com>
 # Based on icx8x code by Dan Smith <dsmith@danplanet.com>
 
 # This program is free software: you can redistribute it and/or modify
@@ -78,12 +78,12 @@ class ICx9xRadio(icf.IcomCloneModeRadio):
         rf.has_bank_index = True
         rf.has_bank_names = False
         rf.memory_bounds = (0, 499)
-#        rf.valid_power_levels = [chirp_common.PowerLevel("High", watts=5.00),
-#                                 chirp_common.PowerLevel("Low", watts=0.50)]
-        rf.valid_modes = ["FM", "WFM", "AM"]
-        rf.valid_tmodes = ["", "Tone", "TSQL", "DTCS"]
-        rf.valid_duplexes = ["", "-", "+"]
-        rf.valid_tuning_steps = list(icx9x_ll.TUNING_STEPS)
+#        rf.valid_power_levels = [chirp_common.PowerLevel("High", watts = 5.0),
+#                                 chirp_common.PowerLevel("Low", watts = 0.5)]
+        rf.valid_modes = list(icx9x_ll.ICX9X_MODES)
+        rf.valid_tmodes = list(icx9x_ll.ICX9X_TONE_MODES)
+        rf.valid_duplexes = list(icx9x_ll.ICX9X_DUPLEXES)[:-1]
+        rf.valid_tuning_steps = list(icx9x_ll.ICX9X_TUNE_STEPS)
         rf.valid_bands = [(495000, 999990000)]
         rf.valid_skips = ["", "S"]
         rf.valid_name_length = 6
@@ -95,8 +95,8 @@ class ICx9xRadio(icf.IcomCloneModeRadio):
         icf.IcomCloneModeRadio.__init__(self, pipe)
 
     def sync_in(self):
-        self._get_type()
-        icf.IcomCloneModeRadio.sync_in(self)
+#        self._get_type()
+#        icf.IcomCloneModeRadio.sync_in(self)
 #        self._mmap[0x1930] = self._isuhf and 1 or 0
         self._mmap = icf.read_file("/var/tmp/ice90u.icf")[1]
 
@@ -108,14 +108,12 @@ class ICx9xRadio(icf.IcomCloneModeRadio):
     def get_memory(self, number):
         if not self._mmap:
             self.sync_in()
-        base = 0
-        return icx9x_ll.get_memory(self._mmap, number, base)
+        return icx9x_ll.get_memory(self._mmap, number)
 
     def set_memory(self, memory):
         if not self._mmap:
             self.sync_in()
-        base = 0
-        self._mmap = icx9x_ll.set_memory(self._mmap, memory, base)
+        self._mmap = icx9x_ll.set_memory(self._mmap, memory)
 
     def get_raw_memory(self, number):
         return icx9x_ll.get_raw_memory(self._mmap, number)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 Jaroslav Škarvada <jskarvad@redhat.com>
+# Copyright 2018-2019 Jaroslav Škarvada <jskarvad@redhat.com>
 # Based on icx8x code by Dan Smith <dsmith@danplanet.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,8 +15,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+ICX9X_MEM_ITEM_FORMAT = """
+struct {
+  ul24 freq;
+  u8 dtcs_polarity:2,
+     unknown_1:2,
+     offset_freq_mult:1,
+     unknown_2:2,
+     freq_mult:1;
+  u8 unknown_3:1,
+     duplex:2,
+     mode:2,
+     tone_mode:3;
+  ul16 offset_freq;
+  u8 dtcs;
+  u8 tx_tone_lo:4,
+     tune_step:4;
+  u8 rx_tone:6,
+     tx_tone_hi:2;
+  char name[6];
+} mem_item;
+"""
+
 ICX9X_MEM_FORMAT = """
-#seekto 0x0010;
 struct {
   lbcd rx_freq[4];
   u8 rxtone;
@@ -113,25 +134,10 @@ struct {
 
 import struct
 
-from chirp import chirp_common, errors
+from chirp import chirp_common, bitwise, errors
 from chirp.memmap import MemoryMap
 from chirp.chirp_common import to_MHz
 
-POS_FREQ_START = 0
-POS_FREQ_END = 2
-POS_OFFSET = 5
-POS_NAME_START = 10
-POS_NAME_END = 15
-POS_RTONE1 = 8
-POS_RTONE2 = 9
-POS_CTONE = 9
-POS_DTCS = 7
-POS_TUNE_STEP = 8
-POS_TMODE = 4
-POS_MODE = 4
-POS_MULT_FLAG = 3
-POS_DTCS_POL = 3
-POS_DUPLEX = 4
 POS_BANK = 0
 POS_BANK_INDEX = 1
 
@@ -139,227 +145,21 @@ BANK_OFFS = 0x2260
 
 MEM_LOC_SIZE = 16
 
-TUNING_STEPS = [5.0, 6.25, 8.33, 9.0, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0, 100.0, 200.0]
-
+ICX9X_DUPLEXES = ["", "-", "+", ""]
+ICX9X_DTCS_POLARITIES = ["NN", "NR", "RN", "RR"]
+ICX9X_TONE_MODES = ["", "Tone", "TSQL", "DTCS"]
+ICX9X_TUNE_STEPS = [5.0, 6.25, 8.33, 9.0, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0, 100.0, 200.0]
+ICX9X_MODES = ["FM", "WFM", "AM"]
 
 def bank_name(index):
     char = chr(ord("A") + index)
     return "BANK-%s" % char
-
-
-def get_freq(mmap, base):
-    if (ord(mmap[POS_MULT_FLAG]) & 0x01) == 0x01:
-        mult = 6250
-    else:
-        mult = 5000
-
-    val = struct.unpack("<H", mmap[POS_FREQ_START:POS_FREQ_END])[0]
-
-    return (val * mult) + to_MHz(base)
-
-
-def set_freq(mmap, freq, base):
-    tflag = ord(mmap[POS_MULT_FLAG]) & 0xfe
-
-    if chirp_common.is_fractional_step(freq):
-        mult = 6250
-        tflag |= 0x01
-    else:
-        mult = 5000
-
-    value = (freq - to_MHz(base)) / mult
-
-    mmap[POS_MULT_FLAG] = tflag
-    mmap[POS_FREQ_START] = struct.pack("<H", value)
-
-
-def get_name(mmap):
-    return mmap[POS_NAME_START:POS_NAME_END].strip()
-
-
-def set_name(mmap, name):
-    mmap[POS_NAME_START] = name.ljust(6)[:6]
-
-
-def get_rtone(mmap):
-    idx = ord(mmap[POS_RTONE1]) & 0xf0 + (ord(mmap[POS_RTONE2]) & 0x03) << 4
-
-    return chirp_common.TONES[idx]
-
-
-def set_rtone(mmap, tone):
-    idx = chirp_common.TONES.index(tone)
-    mmap[POS_RTONE2] &= 0xfc
-    mmap[POS_RTONE2] |= (idx >> 4) & 0x03
-    mmap[POS_RTONE1] &= 0x0f
-    mmap[POS_RTONE1] |= idx & 0x0f
-
-
-def get_ctone(mmap):
-    idx, = struct.unpack("B", mmap[POS_CTONE])
-    idx >>= 2
-    return chirp_common.TONES[idx]
-
-
-def set_ctone(mmap, tone):
-    mmap[POS_CTONE] &= 0x03
-    mmap[POS_CTONE] |= chirp_common.TONES.index(tone) << 2
-
-
-def get_dtcs(mmap):
-    idx, = struct.unpack("B", mmap[POS_DTCS])
-
-    return chirp_common.DTCS_CODES[idx]
-
-
-def set_dtcs(mmap, code):
-    mmap[POS_DTCS] = chirp_common.DTCS_CODES.index(code)
-
-
-def get_dtcs_polarity(mmap):
-    val = struct.unpack("B", mmap[POS_DTCS_POL])[0] & 0xC0
-
-    pol_values = {
-        0x00: "NN",
-        0x40: "NR",
-        0x80: "RN",
-        0xC0: "RR"}
-
-    return pol_values[val]
-
-
-def set_dtcs_polarity(mmap, polarity):
-    val = struct.unpack("B", mmap[POS_DTCS_POL])[0] & 0x3F
-    pol_values = {"NN": 0x00,
-                  "NR": 0x40,
-                  "RN": 0x80,
-                  "RR": 0xC0}
-    val |= pol_values[polarity]
-
-    mmap[POS_DTCS_POL] = val
-
-
-def get_dup_offset(mmap):
-    if (ord(mmap[POS_MULT_FLAG]) & 0x08) == 0x08:
-        mult = 6250
-    else:
-        mult = 5000
-    val = struct.unpack("<H", mmap[POS_OFFSET:POS_OFFSET+2])[0]
-    return val * mult
-
-
-def set_dup_offset(mmap, offset):
-    if chirp_common.is_fractional_step(offset):
-        mult = 6250
-        flag = 0x08
-    else:
-        mult = 5000
-        flag = 0x00
-    val = struct.pack("<H", offset / mult)
-    mmap[POS_OFFSET] = val
-    mmap[POS_MULT_FLAG] &= 0xf7
-    mmap[POS_MULT_FLAG] |= flag
-
-
-def get_duplex(mmap):
-    val = struct.unpack("B", mmap[POS_DUPLEX])[0] & 0x30
-
-    if val == 0x10:
-        return "-"
-    elif val == 0x20:
-        return "+"
-    else:
-        return ""
-
-
-def set_duplex(mmap, duplex):
-    val = struct.unpack("B", mmap[POS_DUPLEX])[0] & 0xCF
-
-    if duplex == "-":
-        val |= 0x10
-    elif duplex == "+":
-        val |= 0x20
-
-    mmap[POS_DUPLEX] = val
-
-
-def get_tone_enabled(mmap):
-    val = struct.unpack("B", mmap[POS_TMODE])[0] & 0x03
-
-    if val == 0x01:
-        return "Tone"
-    elif val == 0x02:
-        return "TSQL"
-    elif val == 0x04:
-        return "DTCS"
-    else:
-        return ""
-
-
-def set_tone_enabled(mmap, tmode):
-    val = struct.unpack("B", mmap[POS_TMODE])[0] & 0xF8
-
-    if tmode == "Tone":
-        val |= 0x01
-    elif tmode == "TSQL":
-        val |= 0x02
-    elif tmode == "DTCS":
-        val |= 0x04
-
-    mmap[POS_TMODE] = val
-
-
-def get_tune_step(mmap):
-    tsidx = struct.unpack("B", mmap[POS_TUNE_STEP])[0] & 0x0f
-    icx9x_ts = list(TUNING_STEPS)
-
-    try:
-        return icx9x_ts[tsidx]
-    except IndexError:
-        raise errors.InvalidDataError("TS index %i out of range (%i)" %
-                                      (tsidx, len(icx9x_ts)))
-
-
-def set_tune_step(mmap, tstep):
-    val = struct.unpack("B", mmap[POS_TUNE_STEP])[0] & 0xf0
-    icx9x_ts = list(TUNING_STEPS)
-
-    tsidx = icx9x_ts.index(tstep)
-    mmap[POS_TUNE_STEP] = val
-
-
-def get_mode(mmap):
-    val = (struct.unpack("B", mmap[POS_MODE])[0] & 0x18)
-
-    if val == 0x00:
-        return "FM"
-    elif val == 0x08:
-        return "WFM"
-    elif val == 0x10:
-        return "AM"
-
-
-def set_mode(mmap, mode):
-    val = struct.unpack("B", mmap[POS_MODE])[0] & 0xe7
-
-    if mode == "FM":
-        pass
-    elif mode == "WFM":
-        val |= 0x08
-    elif mode == "AM":
-        val |= 0x10
-    else:
-        raise errors.InvalidDataError("%s mode not supported" % mode)
-
-    mmap[POS_MODE] = val
-
 
 def is_used(mmap, number):
     if number == ICx9x_SPECIAL["C"]:
         return True
 
     return (ord(mmap[POS_FLAGS_START + number]) & 0x20) == 0
-
 
 def set_used(mmap, number, used=True):
     if number == ICx9x_SPECIAL["C"]:
@@ -372,7 +172,6 @@ def set_used(mmap, number, used=True):
 
     mmap[POS_FLAGS_START + number] = val
 
-
 def get_skip(mmap, number):
     val = struct.unpack("B", mmap[POS_FLAGS_START + number])[0] & 0x10
 
@@ -380,7 +179,6 @@ def get_skip(mmap, number):
         return "S"
     else:
         return ""
-
 
 def set_skip(mmap, number, skip):
     if skip == "P":
@@ -393,10 +191,8 @@ def set_skip(mmap, number, skip):
 
     mmap[POS_FLAGS_START + number] = val
 
-
 def get_mem_offset(number):
     return number * MEM_LOC_SIZE
-
 
 def get_raw_memory(mmap, number):
     offset = get_mem_offset(number)
@@ -418,25 +214,37 @@ def get_bank_index(mmap, number):
 def set_bank_index(mmap, number, index):
     mmap[POS_BANK_INDEX + (number << 1) + BANK_OFFS] = index
 
-def _get_memory(_map, mmap, base):
+def freq_chirp2icom(freq):
+    if chirp_common.is_fractional_step(freq):
+        mult = 6250
+    else:
+        mult = 5000
+
+    return (freq / mult, mult)
+
+def freq_icom2chirp(freq, mult):
+    return freq * (6250 if mult else 5000)
+
+def _get_memory(_map, mmap):
     mem = chirp_common.Memory()
 
-    mem.freq = get_freq(mmap, base)
-    mem.name = get_name(mmap)
-    mem.rtone = get_rtone(mmap)
-    mem.ctone = get_ctone(mmap)
-    mem.dtcs = get_dtcs(mmap)
-    mem.dtcs_polarity = get_dtcs_polarity(mmap)
-    mem.offset = get_dup_offset(mmap)
-    mem.duplex = get_duplex(mmap)
-    mem.tmode = get_tone_enabled(mmap)
-    mem.tuning_step = get_tune_step(mmap)
-    mem.mode = get_mode(mmap)
+    memobj = bitwise.parse(ICX9X_MEM_ITEM_FORMAT, mmap)
+
+    mem.freq = freq_icom2chirp(memobj.mem_item.freq, memobj.mem_item.freq_mult)
+    mem.name = memobj.mem_item.name
+    mem.rtone = chirp_common.TONES[(memobj.mem_item.tx_tone_hi << 4) + memobj.mem_item.tx_tone_lo]
+    mem.ctone = chirp_common.TONES[memobj.mem_item.rx_tone]
+    mem.dtcs = chirp_common.DTCS_CODES[memobj.mem_item.dtcs]
+    mem.dtcs_polarity = ICX9X_DTCS_POLARITIES[memobj.mem_item.dtcs_polarity]
+    mem.offset = freq_icom2chirp(memobj.mem_item.offset_freq, memobj.mem_item.offset_freq_mult)
+    mem.duplex = ICX9X_DUPLEXES[memobj.mem_item.duplex]
+    mem.tmode = ICX9X_TONE_MODES[memobj.mem_item.tone_mode]
+    mem_tuning_step = ICX9X_TUNE_STEPS[memobj.mem_item.tune_step]
+    mem.mode = ICX9X_MODES[memobj.mem_item.mode]
 
     return mem
 
-
-def get_memory(_map, number, base):
+def get_memory(_map, number):
 #    if not is_used(_map, number):
 #        mem = chirp_common.Memory()
 #        if number < 200:
@@ -448,37 +256,36 @@ def get_memory(_map, number, base):
 #        mem = _get_memory(_map, mmap, base)
 
     mmap = get_raw_memory(_map, number)
-    mem = _get_memory(_map, mmap, base)
+    mem = _get_memory(_map, mmap)
     mem.number = number
 
     #mem.skip = get_skip(_map, number)
 
     return mem
 
-
 def clear_tx_inhibit(mmap):
     txi = struct.unpack("B", mmap[POS_TXI])[0]
     txi |= 0x40
     mmap[POS_TXI] = txi
 
+def set_memory(_map, mem):
+    mmap = get_raw_memory(_map, mem.number)
+    memobj = bitwise.parse(ICX9X_MEM_ITEM_FORMAT, mmap)
 
-def set_memory(_map, memory, base):
-    mmap = get_raw_memory(_map, memory.number)
+    (memobj.mem_item.freq, memobj.mem_item.freq_mult) = freq_chirp2icom(mem.freq)
+    memobj.mem_item.name = mem.name
+    memobj.mem_item.tx_tone_hi = chirp_common.TONES.index(mem.rtone) >> 4
+    memobj.mem_item.tx_tone_lo = chirp_common.TONES.index(mem.rtone) & 0x0f
+    memobj.mem_item.rx_tone = chirp_common.TONES.index(mem.ctone)
+    memobj.mem_item.dtcs = chirp_common.DTCS_CODES.index(mem.dtcs)
+    memobj.mem_item.dtcs_polarity = ICX9X_DTCS_POLARITIES.index(mem.dtcs_polarity)
+    (memobj.mem_item.offset_freq, memobj.mem_item.offset_freq_mult) = freq_chirp2icom(mem.offset)
+    memobj.mem_item.duplex = ICX9X_DUPLEXES.index(mem.duplex)
+    memobj.mem_item.tone_mode = ICX9X_TONE_MODES.index(mem.tmode)
+    memobj.mem_item.tune_step = ICX9X_TUNE_STEPS.index(mem.tuning_step)
+    memobj.mem_item.mode = ICX9X_MODES.index(mem.mode)
 
-    set_freq(mmap, memory.freq, base)
-    set_name(mmap, memory.name)
-    set_rtone(mmap, memory.rtone)
-    set_ctone(mmap, memory.ctone)
-    set_dtcs(mmap, memory.dtcs)
-    set_dtcs_polarity(mmap, memory.dtcs_polarity)
-    set_dup_offset(mmap, memory.offset)
-    set_duplex(mmap, memory.duplex)
-    set_tone_enabled(mmap, memory.tmode)
-    set_tune_step(mmap, memory.tuning_step)
-    set_mode(mmap, memory.mode)
-    #set_skip(_map, memory.number, memory.skip)
-
-    _map[get_mem_offset(memory.number)] = mmap.get_packed()
+    _map[get_mem_offset(mem.number)] = mmap.get_packed()
 
     return _map
 

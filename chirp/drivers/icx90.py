@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-ICX90_MEM_ITEM_FORMAT = """
-struct {
+ICX90_MEM_FORMAT = """
+struct mem_item {
   ul24 freq;
   u8 dtcs_polarity:2,
      unknown_1:2,
@@ -34,90 +34,103 @@ struct {
   u8 rx_tone:6,
      tx_tone_hi:2;
   char name[6];
-} mem_item;
-"""
-
-ICX90_MEM_FORMAT = """
-#seekto 0x2a93;
-ul16 mem_channel;
-u8 unknown_1[10];
-u8 squelch_level;
-
-struct {
-  lbcd lower_vhf[2];
-  lbcd upper_vhf[2];
-  lbcd lower_uhf[2];
-  lbcd upper_uhf[2];
-} limits;
-
-struct vfosettings {
-  lbcd freq[4];
-  u8   rxtone;
-  u8   unknown1;
-  lbcd offset[3];
-  u8   txtone;
-  u8   power:1,
-       bandwidth:1,
-       unknown2:4,
-       duplex:2;
-  u8   step;
-  u8   unknown3[4];
+};
+struct bank_item {
+  u8 unknown_4:1,
+     prog_skip:1,
+     mem_skip:1,
+     bank_index:5;
+  u8 bank_channel;
+};
+struct tv_mem_item {
+  u8 fixed:7,
+     modulation:1;
+  ul24 freq;
+  char name[4];
 };
 
-#seekto 0x0790;
+struct mem_item memory[500];
 struct {
-  struct vfosettings uhf;
-  struct vfosettings vhf;
-} vfo;
-
-#seekto 0x07C2;
+  struct mem_item a;
+  struct mem_item b;
+} scan_edges[25];
+struct bank_item banks[500];
+u8 unknown_5[120];
+struct mem_item vfo_a_band[10];
+struct mem_item vfo_b_band[10];
+struct mem_item call_channel[5];
+struct tv_mem_item tv_memory[68];
+u8 unknown_6[35];
+ul16 mem_channel;
+u8 unknown_7[10];
+u8 squelch_level;
 struct {
-  u8 squelch;
-  u8 vox;
-  u8 timeout;
-  u8 save:1,
-     unknown_1:1,
-     dw:1,
-     ste:1,
-     beep:1,
-     unknown_2:1,
-     bclo:1,
-     ch_flag:1;
-  u8 backlight:2,
-     relaym:1,
-     scanm:1,
-     pri:1,
-     unknown_3:3;
-  u8 unknown_4[3];
-  u8 pri_ch;
-} settings;
-
-#seekto 0x07E0;
-u16 fm_presets[16];
-
-#seekto 0x0810;
-struct {
-  lbcd rx_freq[4];
-  u8 rxtone;
-  lbcd offset[4];
-  u8 txtone;
-  u8 ishighpower:1,
-     iswide:1,
-     dtcsinvt:1,
-     unknown1:1,
-     dtcsinvr:1,
-     unknown2:1,
-     duplex:2;
-  u8 unknown;
-  lbcd tx_freq[4];
-} rx_memory[99];
-
-#seekto 0x1008;
-struct {
-  u8 unknown[8];
-  u8 name[6];
-  u8 pad[2];
-} names[128];
+  u8 dtmf_digits[16];
+} dtmf_codes[10];
+u8 tv_channel_skip[68];
+u8 unknown_8[128];
+u8 scan_resume;
+u8 scan_pause;
+u8 unknown_9;
+u8 beep_volume;
+u8 beep;
+u8 back_light;
+u8 busy_led;
+u8 auto_power_off;
+u8 power_save;
+u8 monitor;
+u8 dial_speedup;
+u8 unknown_10;
+u8 auto_repeater;
+u8 dtmf_speed;
+u8 hm_75a_function;
+u8 wx_alert;
+u8 expand_1;
+u8 scan_stop_beep;
+u8 scan_stop_light;
+u8 unknown_11;
+u8 light_position;
+u8 ligth_color;
+u8 unknown_12;
+u8 band_edge_beep;
+u8 auto_power_on;
+u8 key_lock;
+u8 ptt_lock;
+u8 lcd_contrast;
+u8 opening_message;
+u8 expand_2;
+u8 unknown_13;
+u8 busy_lock_out;
+u8 timeout_timer;
+u8 unknown_14;
+u8 active_band;
+u8 fm_narrow;
+u8 morse_code_enable;
+u8 morse_code_speed;
+u8 unknown_15[22];
+char opening_message_text[6];
+u8 unknown_16[186];
+u8 tune_step;
+u8 unknown_17[4];
+u8 band_selected;
+u8 unknown_18[2];
+u8 memory_display:1,
+   memory_name:1,
+   dial_select:1,
+   power:1,
+   vfo:1,
+   attenuator:1,
+   unknown_19:2;
+u8 unknown_20[2];
+u8 mode;
+u8 unknown_21;
+char alpha_tag[6];
+u8 vfo_scan;
+u8 memory_scan;
+u8 unknown_22;
+u8 tv_channel;
+u8 wx_channel;
+char comment[16];
 """
 
 import logging
@@ -133,12 +146,10 @@ from chirp.settings import RadioSetting, RadioSettingGroup, \
 
 LOG = logging.getLogger(__name__)
 
-POS_BANK = 0
-POS_BANK_INDEX = 1
-
-BANK_OFFS = 0x2260
-
-MEM_LOC_SIZE = 16
+BANK_INDEXES = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "L", "N", "O",
+                "P", "Q", "R", "T", "U", "Y"]
+BANK_NUM = 100
+BANK_INDEXES_NUM = len(BANK_INDEXES)
 
 ICX90_DUPLEXES = ["", "-", "+", ""]
 ICX90_DTCS_POLARITIES = ["NN", "NR", "RN", "RR"]
@@ -186,25 +197,6 @@ def set_skip(mmap, number, skip):
 
     mmap[POS_FLAGS_START + number] = val
 
-def get_mem_offset(number):
-    return number * MEM_LOC_SIZE
-
-def get_bank(mmap, number):
-    val = ord(mmap[POS_BANK + (number << 1) + BANK_OFFS]) & 0x0F
-    return val
-
-def set_bank(mmap, number, bank):
-    offs = POS_BANK + (number << 1) + BANK_OFFS
-    val = ord(mmap[offs]) & 0xF0
-    val |= bank
-    mmap[offs] = val
-
-def get_bank_index(mmap, number):
-    return ord(mmap[POS_BANK_INDEX + (number << 1) + BANK_OFFS])
-
-def set_bank_index(mmap, number, index):
-    mmap[POS_BANK_INDEX + (number << 1) + BANK_OFFS] = index
-
 def freq_chirp2icom(freq):
     if chirp_common.is_fractional_step(freq):
         mult = 6250
@@ -227,8 +219,7 @@ def erase_memory(_map, number):
     return _map
 
 class ICx90BankModel(icf.IcomIndexedBankModel):
-    bank_indexes = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "L", "N", "O",
-                    "P", "Q", "R", "T", "U", "Y"]
+    bank_indexes = BANK_INDEXES
 
     def get_mappings(self):
         banks = []
@@ -257,21 +248,27 @@ class ICx90Radio(icf.IcomCloneModeRadio):
 
     _ranges = [(0x0000, 0x2d40, 32)]
     _num_banks = 18
-    _bank_index_bounds = (0, 99)
+    _bank_index_bounds = (0, BANK_NUM - 1)
     _can_hispeed = False
     _check_clone_status = False
 
+    # it seems the bank driver has different terminology about bank number and index
+    # so in fact _get_bank and _set_bank are about indexes (i.e index in the array
+    # of bank names - A .. Y
+    # and _get_bank_index and _set_bank_index are about positions in the bank (0..99)
     def _get_bank(self, loc):
-        return get_bank(self._mmap, loc)
+        i = self.memobj.banks[loc].bank_index
+        return i if i < BANK_INDEXES_NUM else None
 
     def _set_bank(self, loc, bank):
-        return set_bank(self._mmap, loc, bank)
+        self.memobj.banks[loc].bank_index = bank
 
     def _get_bank_index(self, loc):
-        return get_bank_index(self._mmap, loc)
+        i = self.memobj.banks[loc].bank_channel
+        return i if i < BANK_NUM else None
 
     def _set_bank_index(self, loc, index):
-        return set_bank_index(self._mmap, loc, index)
+        self.memobj.banks[loc].bank_channel = index
 
     def get_features(self):
         rf = chirp_common.RadioFeatures()
@@ -280,9 +277,13 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         rf.has_bank = False
         rf.has_bank_index = True
         rf.has_bank_names = False
+        rf.has_dtcs = True
+        rf.has_dtcs_polarity = True
+        rf.has_tuning_step = True
         rf.memory_bounds = (0, 499)
 #        rf.valid_power_levels = [chirp_common.PowerLevel("High", watts = 5.0),
 #                                 chirp_common.PowerLevel("Low", watts = 0.5)]
+        rf.valid_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()*+-,/|= "
         rf.valid_modes = list(ICX90_MODES)
         rf.valid_tmodes = list(ICX90_TONE_MODES)
         rf.valid_duplexes = list(ICX90_DUPLEXES)[:-1]
@@ -314,11 +315,18 @@ class ICx90Radio(icf.IcomCloneModeRadio):
     def __init__(self, pipe):
         icf.IcomCloneModeRadio.__init__(self, pipe)
 
+    def process_mmap(self):
+        self.memobj = bitwise.parse(ICX90_MEM_FORMAT, self.mmap)
+
+    def get_raw_memory(self, number):
+        return repr(self.memobj.memory[number])
+
     def sync_in(self):
 #        self._get_type()
 #        icf.IcomCloneModeRadio.sync_in(self)
-#        self._mmap[0x1930] = self._isuhf and 1 or 0
-        self._mmap = icf.read_file("/var/tmp/ice90u.icf")[1]
+#        self.mmap[0x1930] = self._isuhf and 1 or 0
+        self.mmap = icf.read_file("/var/tmp/ice90u.icf")[1]
+        self.process_mmap()
 
     def sync_out(self):
         self._get_type()
@@ -326,9 +334,6 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         return
 
     def get_memory(self, number):
-        if not self._mmap:
-            self.sync_in()
-
 #    if not is_used(_map, number):
 #        mem = chirp_common.Memory()
 #        if number < 200:
@@ -339,53 +344,42 @@ class ICx90Radio(icf.IcomCloneModeRadio):
 #        mmap = self.get_raw_memory(number)
 #        mem = _get_memory(_map, mmap, base)
 
-        mmap = self.get_raw_memory(number)
         mem = chirp_common.Memory()
 
-        memobj = bitwise.parse(ICX90_MEM_ITEM_FORMAT, mmap)
+        mem_item = self.memobj.memory[number]
 
-        mem.freq = freq_icom2chirp(memobj.mem_item.freq, memobj.mem_item.freq_mult)
-        mem.name = memobj.mem_item.name
-        mem.rtone = chirp_common.TONES[(memobj.mem_item.tx_tone_hi << 4) + memobj.mem_item.tx_tone_lo]
-        mem.ctone = chirp_common.TONES[memobj.mem_item.rx_tone]
-        mem.dtcs = chirp_common.DTCS_CODES[memobj.mem_item.dtcs]
-        mem.dtcs_polarity = ICX90_DTCS_POLARITIES[memobj.mem_item.dtcs_polarity]
-        mem.offset = freq_icom2chirp(memobj.mem_item.offset_freq, memobj.mem_item.offset_freq_mult)
-        mem.duplex = ICX90_DUPLEXES[memobj.mem_item.duplex]
-        mem.tmode = ICX90_TONE_MODES[memobj.mem_item.tone_mode]
-        mem_tuning_step = ICX90_TUNE_STEPS[memobj.mem_item.tune_step]
-        mem.mode = ICX90_MODES[memobj.mem_item.mode]
+        mem.freq = freq_icom2chirp(mem_item.freq, mem_item.freq_mult)
+        mem.name = mem_item.name
+        mem.rtone = chirp_common.TONES[(mem_item.tx_tone_hi << 4) + mem_item.tx_tone_lo]
+        mem.ctone = chirp_common.TONES[mem_item.rx_tone]
+        mem.dtcs = chirp_common.DTCS_CODES[mem_item.dtcs]
+        mem.dtcs_polarity = ICX90_DTCS_POLARITIES[mem_item.dtcs_polarity]
+        mem.offset = freq_icom2chirp(mem_item.offset_freq, mem_item.offset_freq_mult)
+        mem.duplex = ICX90_DUPLEXES[mem_item.duplex]
+        mem.tmode = ICX90_TONE_MODES[mem_item.tone_mode]
+        mem_tuning_step = ICX90_TUNE_STEPS[mem_item.tune_step]
+        mem.mode = ICX90_MODES[mem_item.mode]
 
         mem.number = number
 
-        #mem.skip = get_skip(self._mmap, number)
+        #mem.skip = get_skip(self.mmap, number)
         return mem
 
     def set_memory(self, memory):
-        if not self._mmap:
-            self.sync_in()
+        mem_item = self.memobj.memory[number]
 
-        mmap = self.get_raw_memory(memory.number)
-        memobj = bitwise.parse(ICX90_MEM_ITEM_FORMAT, mmap)
-
-        (memobj.mem_item.freq, memobj.mem_item.freq_mult) = freq_chirp2icom(memory.freq)
-        memobj.mem_item.name = memory.name
-        memobj.mem_item.tx_tone_hi = chirp_common.TONES.index(memory.rtone) >> 4
-        memobj.mem_item.tx_tone_lo = chirp_common.TONES.index(memory.rtone) & 0x0f
-        memobj.mem_item.rx_tone = chirp_common.TONES.index(memory.ctone)
-        memobj.mem_item.dtcs = chirp_common.DTCS_CODES.index(memory.dtcs)
-        memobj.mem_item.dtcs_polarity = ICX90_DTCS_POLARITIES.index(memory.dtcs_polarity)
-        (memobj.mem_item.offset_freq, memobj.mem_item.offset_freq_mult) = freq_chirp2icom(memory.offset)
-        memobj.mem_item.duplex = ICX90_DUPLEXES.index(memory.duplex)
-        memobj.mem_item.tone_mode = ICX90_TONE_MODES.index(memory.tmode)
-        memobj.mem_item.tune_step = ICX90_TUNE_STEPS.index(memory.tuning_step)
-        memobj.mem_item.mode = ICX90_MODES.index(memory.mode)
-
-        self._mmap[get_mem_offset(mem.number)] = mmap.get_packed()
-
-    def get_raw_memory(self, number):
-        offset = get_mem_offset(number)
-        return MemoryMap(self._mmap[offset:offset + MEM_LOC_SIZE])
+        (mem_item.freq, mem_item.freq_mult) = freq_chirp2icom(memory.freq)
+        mem_item.name = memory.name
+        mem_item.tx_tone_hi = chirp_common.TONES.index(memory.rtone) >> 4
+        mem_item.tx_tone_lo = chirp_common.TONES.index(memory.rtone) & 0x0f
+        mem_item.rx_tone = chirp_common.TONES.index(memory.ctone)
+        mem_item.dtcs = chirp_common.DTCS_CODES.index(memory.dtcs)
+        mem_item.dtcs_polarity = ICX90_DTCS_POLARITIES.index(memory.dtcs_polarity)
+        (mem_item.offset_freq, mem_item.offset_freq_mult) = freq_chirp2icom(memory.offset)
+        mem_item.duplex = ICX90_DUPLEXES.index(memory.duplex)
+        mem_item.tone_mode = ICX90_TONE_MODES.index(memory.tmode)
+        mem_item.tune_step = ICX90_TUNE_STEPS.index(memory.tuning_step)
+        mem_item.mode = ICX90_MODES.index(memory.mode)
 
     def get_bank_model(self):
         return ICx90BankModel(self)

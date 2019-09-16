@@ -50,15 +50,12 @@ struct tv_mem_item {
 };
 
 struct mem_item memory[500];
-struct {
-  struct mem_item a;
-  struct mem_item b;
-} scan_edges[25];
+struct mem_item scan_edges[50];
 struct bank_item banks[500];
 u8 unknown_5[120];
 struct mem_item vfo_a_band[10];
 struct mem_item vfo_b_band[10];
-struct mem_item call_channel[5];
+struct mem_item call_channels[5];
 struct tv_mem_item tv_memory[68];
 u8 unknown_6[35];
 ul16 mem_channel;
@@ -133,6 +130,9 @@ u8 wx_channel;
 char comment[16];
 """
 
+# in bytes
+MEM_ITEM_SIZE = 16
+
 import logging
 
 import icf
@@ -148,75 +148,16 @@ LOG = logging.getLogger(__name__)
 
 BANK_INDEXES = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "L", "N", "O",
                 "P", "Q", "R", "T", "U", "Y"]
+MEM_NUM = 500
 BANK_NUM = 100
 BANK_INDEXES_NUM = len(BANK_INDEXES)
 
+ICX90_NAME_LENGTH = 6
 ICX90_DUPLEXES = ["", "-", "+", ""]
 ICX90_DTCS_POLARITIES = ["NN", "NR", "RN", "RR"]
 ICX90_TONE_MODES = ["", "Tone", "TSQL", "DTCS"]
 ICX90_TUNE_STEPS = [5.0, 6.25, 8.33, 9.0, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0, 100.0, 200.0]
 ICX90_MODES = ["FM", "WFM", "AM"]
-
-def bank_name(index):
-    char = chr(ord("A") + index)
-    return "BANK-%s" % char
-
-def is_used(mmap, number):
-    if number == ICX90_SPECIAL["C"]:
-        return True
-
-    return (ord(mmap[POS_FLAGS_START + number]) & 0x20) == 0
-
-def set_used(mmap, number, used=True):
-    if number == ICX90_SPECIAL["C"]:
-        return
-
-    val = struct.unpack("B", mmap[POS_FLAGS_START + number])[0] & 0xDF
-
-    if not used:
-        val |= 0x20
-
-    mmap[POS_FLAGS_START + number] = val
-
-def get_skip(mmap, number):
-    val = struct.unpack("B", mmap[POS_FLAGS_START + number])[0] & 0x10
-
-    if val != 0:
-        return "S"
-    else:
-        return ""
-
-def set_skip(mmap, number, skip):
-    if skip == "P":
-        raise errors.InvalidDataError("PSKIP not supported by this model")
-
-    val = struct.unpack("B", mmap[POS_FLAGS_START + number])[0] & 0xEF
-
-    if skip == "S":
-        val |= 0x10
-
-    mmap[POS_FLAGS_START + number] = val
-
-def freq_chirp2icom(freq):
-    if chirp_common.is_fractional_step(freq):
-        mult = 6250
-    else:
-        mult = 5000
-
-    return (freq / mult, mult)
-
-def freq_icom2chirp(freq, mult):
-    return freq * (6250 if mult else 5000)
-
-def clear_tx_inhibit(mmap):
-    txi = struct.unpack("B", mmap[POS_TXI])[0]
-    txi |= 0x40
-    mmap[POS_TXI] = txi
-
-def erase_memory(_map, number):
-#    set_used(_map, number, False)
-
-    return _map
 
 class ICx90BankModel(icf.IcomIndexedBankModel):
     bank_indexes = BANK_INDEXES
@@ -252,6 +193,38 @@ class ICx90Radio(icf.IcomCloneModeRadio):
     _can_hispeed = False
     _check_clone_status = False
 
+    def __init__(self, pipe):
+        icf.IcomCloneModeRadio.__init__(self, pipe)
+        self.init_special()
+
+    def special_add(self, key, item_type, num, unique_idx):
+          item = {}
+          item["item_type"] = item_type
+          item["num"] = num
+          item["uidx"] = unique_idx
+          self.special[key] = item
+
+    def init_special(self):
+      self.special = {}
+      i = 0
+      # program scan edges
+      for x in range(25):
+          self.special_add("Scan edge: %02dA" % x, "scan_edge", x * 2, i)
+          self.special_add("Scan edge: %02dB" % x, "scan_edge", x * 2 + 1, i + 1)
+          i += 2
+      # call channels
+      for x in range(5):
+          self.special_add("Call ch: %d" % x, "call_chan", x, i)
+          i += 1
+      # VFO A
+      for x in range(10):
+          self.special_add("VFO A: %d" % x, "vfo_a", x, i)
+          i += 1
+      # VFO B
+      for x in range(10):
+          self.special_add("VFO B: %d" % x, "vfo_b", x, i)
+          i += 1
+
     # it seems the bank driver has different terminology about bank number and index
     # so in fact _get_bank and _set_bank are about indexes (i.e index in the array
     # of bank names - A .. Y
@@ -277,10 +250,12 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         rf.has_bank = False
         rf.has_bank_index = True
         rf.has_bank_names = False
+        rf.can_delete = True
         rf.has_dtcs = True
         rf.has_dtcs_polarity = True
         rf.has_tuning_step = True
-        rf.memory_bounds = (0, 499)
+        rf.has_comment = False
+        rf.memory_bounds = (0, MEM_NUM - 1)
 #        rf.valid_power_levels = [chirp_common.PowerLevel("High", watts = 5.0),
 #                                 chirp_common.PowerLevel("Low", watts = 0.5)]
         rf.valid_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()*+-,/|= "
@@ -289,9 +264,9 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         rf.valid_duplexes = list(ICX90_DUPLEXES)[:-1]
         rf.valid_tuning_steps = list(ICX90_TUNE_STEPS)
         rf.valid_bands = [(495000, 999990000)]
-        rf.valid_skips = ["", "S"]
-        rf.valid_name_length = 6
-#        rf.valid_special_chans = sorted(ICx90_SPECIAL.keys())
+        rf.valid_skips = ["", "S", "P"]
+        rf.valid_name_length = ICX90_NAME_LENGTH
+        rf.valid_special_chans = sorted(self.special.keys())
 
         return rf
 
@@ -312,9 +287,6 @@ class ICx90Radio(icf.IcomCloneModeRadio):
     def set_settings(self, settings):
         pass
 
-    def __init__(self, pipe):
-        icf.IcomCloneModeRadio.__init__(self, pipe)
-
     def process_mmap(self):
         self.memobj = bitwise.parse(ICX90_MEM_FORMAT, self.mmap)
 
@@ -333,53 +305,113 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         icf.IcomCloneModeRadio.sync_out(self)
         return
 
-    def get_memory(self, number):
-#    if not is_used(_map, number):
-#        mem = chirp_common.Memory()
-#        if number < 200:
-#            mem.number = number
-#            mem.empty = True
-#            return mem
-#    else:
-#        mmap = self.get_raw_memory(number)
-#        mem = _get_memory(_map, mmap, base)
+    def freq_chirp2icom(self, freq):
+        if chirp_common.is_fractional_step(freq):
+            mult = 6250
+        else:
+            mult = 5000
 
+        return (freq / mult, mult)
+
+    def freq_icom2chirp(self, freq, mult):
+        return freq * (6250 if mult else 5000)
+
+    def get_skip(self, number):
+        bank_item = self.memobj.banks[number]
+        if bank_item.prog_skip:
+            return "P"
+        elif bank_item.mem_skip:
+            return "S"
+        return ""
+
+    def set_skip(self, number, skip):
+        bank_item = self.memobj.banks[number]
+        if skip == "P":
+            bank_item.prog_skip = 1
+            bank_item.mem_skip = 1
+        elif skip == "S":
+            bank_item.prog_skip = 0
+            bank_item.mem_skip = 1
+        elif skip == "":
+            bank_item.prog_skip = 0
+            bank_item.mem_skip = 0
+        else:
+            raise errors.InvalidDataError("skip '%s' not supported" % skip)
+
+    # returns (memobj.mem_item, is_special_channel, unique_idx)
+    def get_mem_item(self, number):
+        try:
+            item_type = self.special[number]["item_type"]
+            num = self.special[number]["num"]
+            unique_idx = self.special[number]["uidx"]
+            if item_type == "scan_edge":
+                return (self.memobj.scan_edges[num], True, unique_idx)
+            elif item_type == "call_chan":
+                return (self.memobj.call_channels[num], True, unique_idx)
+            elif item_type == "vfo_a":
+                return (self.memobj.vfo_a_band[num], True, unique_idx)
+            elif item_type == "vfo_b":
+                return (self.memobj.vfo_b_band[num], True, unique_idx)
+            else:
+                raise errors.InvalidDataError("unknown special channel type '%s'" % item_type)
+        except KeyError:
+            return (self.memobj.memory[number], False, number)
+
+    def get_memory(self, number):
         mem = chirp_common.Memory()
 
-        mem_item = self.memobj.memory[number]
+        (mem_item, special, unique_idx) = self.get_mem_item(number)
 
-        mem.freq = freq_icom2chirp(mem_item.freq, mem_item.freq_mult)
-        mem.name = mem_item.name
-        mem.rtone = chirp_common.TONES[(mem_item.tx_tone_hi << 4) + mem_item.tx_tone_lo]
-        mem.ctone = chirp_common.TONES[mem_item.rx_tone]
-        mem.dtcs = chirp_common.DTCS_CODES[mem_item.dtcs]
-        mem.dtcs_polarity = ICX90_DTCS_POLARITIES[mem_item.dtcs_polarity]
-        mem.offset = freq_icom2chirp(mem_item.offset_freq, mem_item.offset_freq_mult)
-        mem.duplex = ICX90_DUPLEXES[mem_item.duplex]
-        mem.tmode = ICX90_TONE_MODES[mem_item.tone_mode]
-        mem_tuning_step = ICX90_TUNE_STEPS[mem_item.tune_step]
-        mem.mode = ICX90_MODES[mem_item.mode]
+        mem.freq = self.freq_icom2chirp(mem_item.freq, mem_item.freq_mult)
+        if mem.freq == 0:
+            mem.empty = True
+        else:
+            mem.empty = False
+            if special:
+                mem.name = " " * ICX90_NAME_LENGTH
+            else:
+                mem.name = mem_item.name
+            mem.rtone = chirp_common.TONES[(mem_item.tx_tone_hi << 4) + mem_item.tx_tone_lo]
+            mem.ctone = chirp_common.TONES[mem_item.rx_tone]
+            mem.dtcs = chirp_common.DTCS_CODES[mem_item.dtcs]
+            mem.dtcs_polarity = ICX90_DTCS_POLARITIES[mem_item.dtcs_polarity]
+            mem.offset = self.freq_icom2chirp(mem_item.offset_freq, mem_item.offset_freq_mult)
+            mem.duplex = ICX90_DUPLEXES[mem_item.duplex]
+            mem.tmode = ICX90_TONE_MODES[mem_item.tone_mode]
+            mem_tuning_step = ICX90_TUNE_STEPS[mem_item.tune_step]
+            mem.mode = ICX90_MODES[mem_item.mode]
+            if not special:
+                mem.skip = self.get_skip(number)
+        if special:
+           mem.extd_number = number
+           mem.number = -len(self.special) + unique_idx
+        else:
+           mem.number = number
 
-        mem.number = number
-
-        #mem.skip = get_skip(self.mmap, number)
         return mem
 
     def set_memory(self, memory):
-        mem_item = self.memobj.memory[number]
-
-        (mem_item.freq, mem_item.freq_mult) = freq_chirp2icom(memory.freq)
-        mem_item.name = memory.name
-        mem_item.tx_tone_hi = chirp_common.TONES.index(memory.rtone) >> 4
-        mem_item.tx_tone_lo = chirp_common.TONES.index(memory.rtone) & 0x0f
-        mem_item.rx_tone = chirp_common.TONES.index(memory.ctone)
-        mem_item.dtcs = chirp_common.DTCS_CODES.index(memory.dtcs)
-        mem_item.dtcs_polarity = ICX90_DTCS_POLARITIES.index(memory.dtcs_polarity)
-        (mem_item.offset_freq, mem_item.offset_freq_mult) = freq_chirp2icom(memory.offset)
-        mem_item.duplex = ICX90_DUPLEXES.index(memory.duplex)
-        mem_item.tone_mode = ICX90_TONE_MODES.index(memory.tmode)
-        mem_item.tune_step = ICX90_TUNE_STEPS.index(memory.tuning_step)
-        mem_item.mode = ICX90_MODES.index(memory.mode)
+        (mem_item, special, unique_idx) = self.get_mem_item(number)
+        if memory.empty:
+            mem_item.set_raw("\x00" * MEM_ITEM_SIZE)
+        else:
+            (mem_item.freq, mem_item.freq_mult) = self.freq_chirp2icom(memory.freq)
+            if special:
+                mem_item.name = " " * ICX90_NAME_LENGTH
+            else:
+                mem_item.name = memory.name
+            mem_item.tx_tone_hi = chirp_common.TONES.index(memory.rtone) >> 4
+            mem_item.tx_tone_lo = chirp_common.TONES.index(memory.rtone) & 0x0f
+            mem_item.rx_tone = chirp_common.TONES.index(memory.ctone)
+            mem_item.dtcs = chirp_common.DTCS_CODES.index(memory.dtcs)
+            mem_item.dtcs_polarity = ICX90_DTCS_POLARITIES.index(memory.dtcs_polarity)
+            (mem_item.offset_freq, mem_item.offset_freq_mult) = self.freq_chirp2icom(memory.offset)
+            mem_item.duplex = ICX90_DUPLEXES.index(memory.duplex)
+            mem_item.tone_mode = ICX90_TONE_MODES.index(memory.tmode)
+            mem_item.tune_step = ICX90_TUNE_STEPS.index(memory.tuning_step)
+            mem_item.mode = ICX90_MODES.index(memory.mode)
+            if not special:
+                self.set_skip(number, memory.skip)
 
     def get_bank_model(self):
         return ICx90BankModel(self)

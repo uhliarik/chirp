@@ -62,7 +62,7 @@ ul16 mem_channel;
 u8 unknown_7[10];
 u8 squelch_level;
 struct {
-  u8 dtmf_digits[16];
+  char dtmf_digits[16];
 } dtmf_codes[10];
 u8 tv_channel_skip[68];
 u8 unknown_8[128];
@@ -151,6 +151,8 @@ BANK_INDEXES = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "L", "N", "O",
 MEM_NUM = 500
 BANK_NUM = 100
 BANK_INDEXES_NUM = len(BANK_INDEXES)
+DTMF_AUTODIAL_NUM = 10
+DTMF_DIGITS_NUM = 16
 
 ICX90_NAME_LENGTH = 6
 ICX90_DUPLEXES = ["", "-", "+", ""]
@@ -158,6 +160,9 @@ ICX90_DTCS_POLARITIES = ["NN", "NR", "RN", "RR"]
 ICX90_TONE_MODES = ["", "Tone", "TSQL", "DTCS"]
 ICX90_TUNE_STEPS = [5.0, 6.25, 8.33, 9.0, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0, 100.0, 200.0]
 ICX90_MODES = ["FM", "WFM", "AM"]
+
+ICX90_SQUELCH_LEVELS = ["Open", "Auto", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5",
+                        "Level 6", "Level 7", "Level 8", "Level 9"]
 
 class ICx90BankModel(icf.IcomIndexedBankModel):
     bank_indexes = BANK_INDEXES
@@ -270,14 +275,69 @@ class ICx90Radio(icf.IcomCloneModeRadio):
 
         return rf
 
+    def map_dtmf_chirp2icom(self, item):
+        item = str(item).upper()
+        if item == "*":
+            item = "E"
+        elif item == "#":
+            item = "F"
+        elif item == " ":
+            return 0xff
+        try:
+            ret = int(item, 16)
+        except ValueError:
+            raise errors.InvalidDataError("invalid DTMF number '%s'" % item)
+        return ret
+
+    def dtmf_chirp2icom(self, dtmf):
+        return "".join(map(self.map_dtmf_chirp2icom, str(dtmf)))
+
+    def map_dtmf_icom2chirp(self, item):
+        item = ord(item)
+        if item == 0xff:
+            return " "
+        else:
+            item &= 0x0f
+            if item < 10:
+                return str(item)
+            else:
+                return ["A", "B", "C", "D", "*", "#"][item - 10]
+
+    def dtmf_icom2chirp(self, dtmf):
+        return "".join(map(self.map_dtmf_icom2chirp, str(dtmf)))
+
+    def apply_dtmf_autodial(self, setting, obj):
+        obj = self.dtmf_chirp2icom(setting.value)
+
     def get_settings(self):
         try:
             _squelch = 1
             basic = RadioSettingGroup("basic", "Basic Settings")
-            group = RadioSettings(basic)
-            rs = RadioSetting("squelch", "Carrier Squelch Level",
-                              RadioSettingValueInteger(0, 9, _squelch))
+            expand1 = RadioSettingGroup("expand1", "Expand 1")
+            expand2 = RadioSettingGroup("expand2", "Expand 2")
+            dtmf_autodial = RadioSettingGroup("dtmf_autodial", "DTMF autodial")
+            group = RadioSettings(basic, expand1, expand2, dtmf_autodial)
+
+            # basic
+            rs = RadioSetting("mem_channel", "Current memory channel",
+                              RadioSettingValueInteger(0, MEM_NUM - 1, self.memobj.mem_channel))
             basic.append(rs)
+
+            rs = RadioSetting("squelch_level", "Squelch level",
+                              RadioSettingValueList(ICX90_SQUELCH_LEVELS,
+                              ICX90_SQUELCH_LEVELS[self.memobj.squelch_level]))
+            basic.append(rs)
+
+            # DTMF auto dial
+            for x in range(DTMF_AUTODIAL_NUM):
+                rs = RadioSetting("dtmf_codes[%d].dtmf_digits" % x, "DTMF autodial: %d" % x,
+                                  RadioSettingValueString(0, DTMF_DIGITS_NUM,
+                                  self.dtmf_icom2chirp(self.memobj.dtmf_codes[x].dtmf_digits),
+                                  autopad = True, charset = "0123456789ABCD*#abcd "))
+                rs.set_apply_callback(self.apply_dtmf_autodial, self.memobj.dtmf_codes[x].dtmf_digits)
+                dtmf_autodial.append(rs)
+
+
             return group
         except:
             import traceback
@@ -285,7 +345,44 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             return None
 
     def set_settings(self, settings):
-        pass
+        for element in settings:
+            if not isinstance(element, RadioSetting):
+                self.set_settings(element)
+                continue
+            if not element.changed():
+                continue
+            try:
+                if element.has_apply_callback():
+                    LOG.debug("Using apply callback")
+                    try:
+                        element.run_apply_callback()
+                    except NotImplementedError as e:
+                        LOG.error("icx90: %s", e)
+                    continue
+
+                # Find the object containing setting.
+                obj = self.memobj
+                bits = element.get_name().split(".")
+                setting = bits[-1]
+                for name in bits[:-1]:
+                    if name.endswith("]"):
+                        name, index = name.split("[")
+                        index = int(index[:-1])
+                        obj = getattr(obj, name)[index]
+                    else:
+                        obj = getattr(obj, name)
+
+                try:
+                    old_val = getattr(obj, setting)
+                    LOG.debug("Setting %s(%r) <= %s" % (
+                        element.get_name(), old_val, element.value))
+                    setattr(obj, setting, element.value)
+                except AttributeError as e:
+                    LOG.error("Setting %s is not in the memory map: %s" %
+                              (element.get_name(), e))
+            except Exception, e:
+                LOG.debug(element.get_name())
+                raise
 
     def process_mmap(self):
         self.memobj = bitwise.parse(ICX90_MEM_FORMAT, self.mmap)

@@ -153,11 +153,11 @@ LOG = logging.getLogger(__name__)
 MEM_ITEM_SIZE = 16
 TV_MEM_ITEM_SIZE = 8
 
-BANK_INDEXES = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "L", "N", "O",
-                "P", "Q", "R", "T", "U", "Y"]
+BANK_INDEX = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "L", "N", "O",
+              "P", "Q", "R", "T", "U", "Y"]
 MEM_NUM = 500
 BANK_NUM = 100
-BANK_INDEXES_NUM = len(BANK_INDEXES)
+BANK_INDEX_NUM = len(BANK_INDEX)
 DTMF_AUTODIAL_NUM = 10
 DTMF_DIGITS_NUM = 16
 OPENING_MESSAGE_LEN = 6
@@ -165,69 +165,69 @@ COMMENT_LEN = 16
 BANDS=10
 TV_CHANNELS=68
 
-ICX90_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()*+-,/|= "
-ICX90_NAME_LENGTH = 6
-ICX90_TV_NAME_LENGTH = 4
-ICX90_DUPLEXES = ["", "-", "+", ""]
-ICX90_DTCS_POLARITIES = ["NN", "NR", "RN", "RR"]
-ICX90_TONE_MODES = ["", "Tone", "TSQL", "DTCS"]
-ICX90_TUNE_STEPS = [5.0, 6.25, 8.33, 9.0, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0, 100.0, 200.0]
-ICX90_TUNE_STEPS_STR = list(map(lambda x: str(x), ICX90_TUNE_STEPS))
-ICX90_MODES = ["FM", "WFM", "AM"]
-ICX90_TV_MODES = ["WFM", "AM"]
+CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()*+-,/|= "
+NAME_LENGTH = 6
+TV_NAME_LENGTH = 4
+DUPLEX = ["", "-", "+", ""]
+DTCS_POLARITY = ["NN", "NR", "RN", "RR"]
+TONE_MODE = ["", "Tone", "TSQL", "DTCS"]
+TUNE_STEP = [5.0, 6.25, 8.33, 9.0, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0, 100.0, 200.0]
+TUNE_STEP_STR = list(map(lambda x: str(x), TUNE_STEP))
+MODE = ["FM", "WFM", "AM"]
+TV_MODE = ["WFM", "AM"]
 
-ICX90_SQUELCH_LEVELS = ["Open", "Auto", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5",
-                        "Level 6", "Level 7", "Level 8", "Level 9"]
-ICX90_AUTODIAL = ["Tone call", "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9"]
-ICX90_DTMF_SPEED = ["100 ms", "200 ms", "300 ms", "400 ms"]
-ICX90_SCAN_RESUME = ["0 s", "1 s", "2 s", "3 s", "4 s", "5 s", "Hold"]
-ICX90_SCAN_PAUSE = ["2 s", "4 s", "6 s", "8 s", "10 s", "12 s", "14 s", "16 s", "18 s", "20 s", "Hold"]
-ICX90_BEEP_VOLUME = ["Volume", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12",
-                     "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25",
-                     "26", "27", "28", "29", "30", "31"]
-ICX90_BACKLIGHT = ["Off", "On", "Auto"]
-ICX90_AUTO_POWER_OFF = ["Off", "30 min", "60 min", "90 min", "120 min"]
-ICX90_POWER_SAVE = ["Off", "1:1", "1:4", "1:8", "1:16", "Auto"]
-ICX90_MONITOR = ["Push", "Hold"]
-ICX90_AUTO_REPEATER = ["Off", "Duplex only", "Duplex & tone"]
-ICX90_HM_75A_FUNCTION = ["Simple", "Normal 1", "Normal 2"]
-ICX90_LIGHT_POSITION = ["LCD", "Key", "All"]
-ICX90_LIGHT_COLOR = ["Green", "Orange", "Red"]
-ICX90_AUTO_POWER_ON = ["Off", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00", "03:30", "04:00",
-                       "04:30", "05:00", "05:30", "06:00", "06:30", "07:00", "07:30", "08:00",
-                       "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00",
-                       "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00",
-                       "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00",
-                       "20:30", "21:00", "21:30", "22:00", "22:30", "23:00", "23:30", "24:00"]
-ICX90_KEY_LOCK = ["Normal", "No squelch", "No volume", "All"]
-ICX90_LCD_CONTRAST = ["1", "2", "3", "4"]
-ICX90_TIMEOUT_TIMER = ["Off", "1 min", "3 min", "5 min", "10 min"]
-ICX90_ACTIVE_BAND = ["All", "Single"]
-ICX90_MORSE_CODE_SPEED = ["10 WPM", "15 WPM", "20 WPM", "25 WPM"]
-ICX90_WX_CHANNEL = ["WX01", "WX02", "WX03", "WX04", "WX05", "WX06", "WX07", "WX08", "WX09", "WX10"]
-ICX90_MEMORY_DISPLAY = ["Channel", "Bank"]
-ICX90_DIAL_SELECT = ["Normal", "Volume"]
-ICX90_POWER = ["High", "Low"]
-ICX90_VFO = ["A", "B"]
-ICX90_OPERATION_MODE = ["VFO", "Memory", "Call channel", "TV"]
-ICX90_VFO_SCAN = ["All", "Band", "P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8",
-                  "P9", "P10", "P11", "P12", "P13", "P14", "P15", "P16", "P17", "P18",
-                  "P19", "P20", "P21", "P22", "P23", "P24"]
-ICX90_MEMORY_SCAN = ["All", "Bank", "Sel BC", "Sel 5 MHz", "Sel 50 MHz", "Sel WFM", "Sel Air",
-                     "Sel 144 MHz", "Sel 220 MHz", "Sel 300 MHz", "Sel 440 MHz", "Sel 800 MHz"]
+SQUELCH_LEVEL = ["Open", "Auto", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5",
+                 "Level 6", "Level 7", "Level 8", "Level 9"]
+AUTODIAL = ["Tone call", "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9"]
+DTMF_SPEED = ["100 ms", "200 ms", "300 ms", "400 ms"]
+SCAN_RESUME = ["0 s", "1 s", "2 s", "3 s", "4 s", "5 s", "Hold"]
+SCAN_PAUSE = ["2 s", "4 s", "6 s", "8 s", "10 s", "12 s", "14 s", "16 s", "18 s", "20 s", "Hold"]
+BEEP_VOLUME = ["Volume", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12",
+               "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25",
+               "26", "27", "28", "29", "30", "31"]
+BACKLIGHT = ["Off", "On", "Auto"]
+AUTO_POWER_OFF = ["Off", "30 min", "60 min", "90 min", "120 min"]
+POWER_SAVE = ["Off", "1:1", "1:4", "1:8", "1:16", "Auto"]
+MONITOR = ["Push", "Hold"]
+AUTO_REPEATER = ["Off", "Duplex only", "Duplex & tone"]
+HM_75A_FUNCTION = ["Simple", "Normal 1", "Normal 2"]
+LIGHT_POSITION = ["LCD", "Key", "All"]
+LIGHT_COLOR = ["Green", "Orange", "Red"]
+AUTO_POWER_ON = ["Off", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00", "03:30", "04:00",
+                 "04:30", "05:00", "05:30", "06:00", "06:30", "07:00", "07:30", "08:00",
+                 "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00",
+                 "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00",
+                 "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00",
+                 "20:30", "21:00", "21:30", "22:00", "22:30", "23:00", "23:30", "24:00"]
+KEY_LOCK = ["Normal", "No squelch", "No volume", "All"]
+LCD_CONTRAST = ["1", "2", "3", "4"]
+TIMEOUT_TIMER = ["Off", "1 min", "3 min", "5 min", "10 min"]
+ACTIVE_BAND = ["All", "Single"]
+MORSE_CODE_SPEED = ["10 WPM", "15 WPM", "20 WPM", "25 WPM"]
+WX_CHANNEL = ["WX01", "WX02", "WX03", "WX04", "WX05", "WX06", "WX07", "WX08", "WX09", "WX10"]
+MEMORY_DISPLAY = ["Channel", "Bank"]
+DIAL_SELECT = ["Normal", "Volume"]
+POWER = ["High", "Low"]
+VFO = ["A", "B"]
+OPERATION_MODE = ["VFO", "Memory", "Call channel", "TV"]
+VFO_SCAN = ["All", "Band", "P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8",
+            "P9", "P10", "P11", "P12", "P13", "P14", "P15", "P16", "P17", "P18",
+            "P19", "P20", "P21", "P22", "P23", "P24"]
+MEMORY_SCAN = ["All", "Bank", "Sel BC", "Sel 5 MHz", "Sel 50 MHz", "Sel WFM", "Sel Air",
+               "Sel 144 MHz", "Sel 220 MHz", "Sel 300 MHz", "Sel 440 MHz", "Sel 800 MHz"]
 
 class ICx90BankModel(icf.IcomIndexedBankModel):
-    bank_indexes = BANK_INDEXES
+    bank_index = BANK_INDEX
 
     def get_mappings(self):
         banks = []
 
-        if (self._radio._num_banks != len(type(self).bank_indexes)):
+        if (self._radio._num_banks != len(type(self).bank_index)):
             raise Exception("Invalid number of banks %d, supported only %d banks" %
-                (self._radio._num_banks, len(type(self).bank_indexes)))
+                (self._radio._num_banks, len(type(self).bank_index)))
 
         for i in range(0, self._radio._num_banks):
-            index = type(self).bank_indexes[i]
+            index = type(self).bank_index[i]
             bank = self._radio._bank_class(self, index, "BANK-%s" % index)
             bank.index = i
             banks.append(bank)
@@ -283,7 +283,6 @@ class ICx90Radio(icf.IcomCloneModeRadio):
           i += 1
 
     def get_sub_devices(self):
-        # this is needed because sub devices must be of a child class
         return [ICx90Radio(self._mmap), ICx90Radio_tv(self._mmap)]
 
     # it seems the bank driver has different terminology about bank number and index
@@ -292,7 +291,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
     # and _get_bank_index and _set_bank_index are about positions in the bank (0..99)
     def _get_bank(self, loc):
         i = self.memobj.banks[loc].bank_index
-        return i if i < BANK_INDEXES_NUM else None
+        return i if i < BANK_INDEX_NUM else None
 
     def _set_bank(self, loc, bank):
         self.memobj.banks[loc].bank_index = bank
@@ -319,16 +318,14 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         rf.has_comment = False
         rf.memory_bounds = (0, MEM_NUM - 1)
         rf.has_sub_devices = True
-#        rf.valid_power_levels = [chirp_common.PowerLevel("High", watts = 5.0),
-#                                 chirp_common.PowerLevel("Low", watts = 0.5)]
-        rf.valid_characters = ICX90_CHARSET
-        rf.valid_modes = list(ICX90_MODES)
-        rf.valid_tmodes = list(ICX90_TONE_MODES)
-        rf.valid_duplexes = list(ICX90_DUPLEXES)[:-1]
-        rf.valid_tuning_steps = list(ICX90_TUNE_STEPS)
+        rf.valid_characters = CHARSET
+        rf.valid_modes = list(MODE)
+        rf.valid_tmodes = list(TONE_MODE)
+        rf.valid_duplexes = list(DUPLEX)[:-1]
+        rf.valid_tuning_steps = list(TUNE_STEP)
         rf.valid_bands = [(495000, 999990000)]
         rf.valid_skips = ["", "S", "P"]
-        rf.valid_name_length = ICX90_NAME_LENGTH
+        rf.valid_name_length = NAME_LENGTH
         rf.valid_special_chans = sorted(self.special.keys())
 
         return rf
@@ -371,133 +368,103 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         try:
             _squelch = 1
             basic = RadioSettingGroup("basic", "Basic")
-            expand1 = RadioSettingGroup("expand1", "Expand 1")
-            expand2 = RadioSettingGroup("expand2", "Expand 2")
+            expand_1 = RadioSettingGroup("expand_1", "Expand 1")
+            expand_2 = RadioSettingGroup("expand_2", "Expand 2")
             dtmf_autodial = RadioSettingGroup("dtmf_autodial", "DTMF autodial")
-            group = RadioSettings(basic, expand1, expand2, dtmf_autodial)
+            group = RadioSettings(basic, expand_1, expand_2, dtmf_autodial)
 
             # basic
-            rs = RadioSetting("mem_channel", "Current memory channel",
-                              RadioSettingValueInteger(0, MEM_NUM - 1, self.memobj.mem_channel))
-            basic.append(rs)
-            rs = RadioSetting("squelch_level", "Squelch level",
-                              RadioSettingValueList(ICX90_SQUELCH_LEVELS,
-                              ICX90_SQUELCH_LEVELS[self.memobj.squelch_level]))
-            basic.append(rs)
-            rs = RadioSetting("scan_resume", "Scan resume",
-                              RadioSettingValueList(ICX90_SCAN_RESUME,
-                              ICX90_SCAN_RESUME[self.memobj.scan_resume]))
-            basic.append(rs)
-            rs = RadioSetting("scan_pause", "Scan pause",
-                              RadioSettingValueList(ICX90_SCAN_PAUSE,
-                              ICX90_SCAN_PAUSE[self.memobj.scan_pause]))
-            basic.append(rs)
-            rs = RadioSetting("beep_volume", "Beep volume",
-                              RadioSettingValueList(ICX90_BEEP_VOLUME,
-                              ICX90_BEEP_VOLUME[self.memobj.beep_volume]))
-            basic.append(rs)
-            rs = RadioSetting("beep", "Operation beep",
-                              RadioSettingValueBoolean(self.memobj.beep))
-            basic.append(rs)
-            rs = RadioSetting("backlight", "LCD backlight",
-                              RadioSettingValueList(ICX90_BACKLIGHT,
-                              ICX90_BACKLIGHT[self.memobj.backlight]))
-            basic.append(rs)
-            rs = RadioSetting("busy_led", "Busy LED",
-                              RadioSettingValueBoolean(self.memobj.busy_led))
-            basic.append(rs)
-            rs = RadioSetting("auto_power_off", "Auto power off",
-                              RadioSettingValueList(ICX90_AUTO_POWER_OFF,
-                              ICX90_AUTO_POWER_OFF[self.memobj.auto_power_off]))
-            basic.append(rs)
-            rs = RadioSetting("power_save", "Power save",
-                              RadioSettingValueList(ICX90_POWER_SAVE,
-                              ICX90_POWER_SAVE[self.memobj.power_save]))
-            basic.append(rs)
-            rs = RadioSetting("monitor", "Monitor",
-                              RadioSettingValueList(ICX90_MONITOR,
-                              ICX90_MONITOR[self.memobj.monitor]))
-            basic.append(rs)
-            rs = RadioSetting("dial_speedup", "Dial speedup",
-                              RadioSettingValueBoolean(self.memobj.dial_speedup))
-            basic.append(rs)
-            rs = RadioSetting("auto_repeater", "Auto repeater",
-                              RadioSettingValueList(ICX90_AUTO_REPEATER,
-                              ICX90_AUTO_REPEATER[self.memobj.auto_repeater]))
-            basic.append(rs)
-            rs = RadioSetting("hm_75a_function", "HM-75A function",
-                              RadioSettingValueList(ICX90_HM_75A_FUNCTION,
-                              ICX90_HM_75A_FUNCTION[self.memobj.hm_75a_function]))
-            basic.append(rs)
-            rs = RadioSetting("wx_alert", "WX alert",
-                              RadioSettingValueBoolean(self.memobj.wx_alert))
-            basic.append(rs)
-            rs = RadioSetting("wx_channel", "Current WX channel",
-                              RadioSettingValueList(ICX90_WX_CHANNEL,
-                              ICX90_WX_CHANNEL[self.memobj.wx_channel]))
-            basic.append(rs)
-            rs = RadioSetting("comment", "Comment",
-                              RadioSettingValueString(0, COMMENT_LEN,
-                              str(self.memobj.comment),
-                              autopad = True, charset = ICX90_CHARSET))
-            basic.append(rs)
-            rs = RadioSetting("tune_step", "Current tune step",
-                              RadioSettingValueList(ICX90_TUNE_STEPS_STR,
-                              ICX90_TUNE_STEPS_STR[self.memobj.tune_step]))
-            basic.append(rs)
-            rs = RadioSetting("band_selected", "Selected band",
-                              RadioSettingValueInteger(0, BANDS - 1, self.memobj.band_selected))
-            basic.append(rs)
-            rs = RadioSetting("memory_display", "Memory display",
-                              RadioSettingValueList(ICX90_MEMORY_DISPLAY,
-                              ICX90_MEMORY_DISPLAY[self.memobj.memory_display]))
-            basic.append(rs)
-            rs = RadioSetting("memory_name", "Memory name",
-                              RadioSettingValueBoolean(self.memobj.memory_name))
-            basic.append(rs)
-            rs = RadioSetting("dial_select", "Dial select",
-                              RadioSettingValueList(ICX90_DIAL_SELECT,
-                              ICX90_DIAL_SELECT[self.memobj.dial_select]))
-            basic.append(rs)
-            rs = RadioSetting("power", "RF power",
-                              RadioSettingValueList(ICX90_POWER,
-                              ICX90_POWER[self.memobj.power]))
-            basic.append(rs)
-            rs = RadioSetting("vfo", "Current VFO",
-                              RadioSettingValueList(ICX90_VFO,
-                              ICX90_VFO[self.memobj.vfo]))
-            basic.append(rs)
-            rs = RadioSetting("attenuator", "RF attenuator",
-                              RadioSettingValueBoolean(self.memobj.attenuator))
-            basic.append(rs)
-            rs = RadioSetting("skip_scan", "Skip scan",
-                              RadioSettingValueBoolean(self.memobj.skip_scan))
-            basic.append(rs)
-#            rs = RadioSetting("mode", "Current mode",
-#                              RadioSettingValueList(ICX90_OPERATION_MODE,
-#                              ICX90_OPERATION_MODE[self.memobj.mode]))
-#            basic.append(rs)
-            rs = RadioSetting("vfo_scan", "VFO scan",
-                              RadioSettingValueList(ICX90_VFO_SCAN,
-                              ICX90_VFO_SCAN[self.memobj.vfo_scan]))
-            basic.append(rs)
-            rs = RadioSetting("memory_scan", "Memory scan",
-                              RadioSettingValueList(ICX90_MEMORY_SCAN,
-                              ICX90_MEMORY_SCAN[self.memobj.memory_scan]))
-            basic.append(rs)
-            rs = RadioSetting("tv_channel", "Current TV channel",
-                              RadioSettingValueInteger(0, TV_CHANNELS - 1, self.memobj.tv_channel))
-            basic.append(rs)
+            basic.append(RadioSetting("mem_channel", "Current memory channel",
+                         RadioSettingValueInteger(0, MEM_NUM - 1, self.memobj.mem_channel)))
+            basic.append(RadioSetting("squelch_level", "Squelch level",
+                         RadioSettingValueList(SQUELCH_LEVEL,
+                         SQUELCH_LEVEL[self.memobj.squelch_level])))
+            basic.append(RadioSetting("scan_resume", "Scan resume",
+                         RadioSettingValueList(SCAN_RESUME,
+                         SCAN_RESUME[self.memobj.scan_resume])))
+            basic.append(RadioSetting("scan_pause", "Scan pause",
+                         RadioSettingValueList(SCAN_PAUSE,
+                         SCAN_PAUSE[self.memobj.scan_pause])))
+            basic.append(RadioSetting("beep_volume", "Beep volume",
+                         RadioSettingValueList(BEEP_VOLUME,
+                         BEEP_VOLUME[self.memobj.beep_volume])))
+            basic.append(RadioSetting("beep", "Operation beep",
+                         RadioSettingValueBoolean(self.memobj.beep)))
+            basic.append(RadioSetting("backlight", "LCD backlight",
+                         RadioSettingValueList(BACKLIGHT,
+                         BACKLIGHT[self.memobj.backlight])))
+            basic.append(RadioSetting("busy_led", "Busy LED",
+                         RadioSettingValueBoolean(self.memobj.busy_led)))
+            basic.append(RadioSetting("auto_power_off", "Auto power off",
+                         RadioSettingValueList(AUTO_POWER_OFF,
+                         AUTO_POWER_OFF[self.memobj.auto_power_off])))
+            basic.append(RadioSetting("power_save", "Power save",
+                         RadioSettingValueList(POWER_SAVE,
+                         POWER_SAVE[self.memobj.power_save])))
+            basic.append(RadioSetting("monitor", "Monitor",
+                         RadioSettingValueList(MONITOR,
+                         MONITOR[self.memobj.monitor])))
+            basic.append(RadioSetting("dial_speedup", "Dial speedup",
+                         RadioSettingValueBoolean(self.memobj.dial_speedup)))
+            basic.append(RadioSetting("auto_repeater", "Auto repeater",
+                         RadioSettingValueList(AUTO_REPEATER,
+                         AUTO_REPEATER[self.memobj.auto_repeater])))
+            basic.append(RadioSetting("hm_75a_function", "HM-75A function",
+                         RadioSettingValueList(HM_75A_FUNCTION,
+                         HM_75A_FUNCTION[self.memobj.hm_75a_function])))
+            basic.append(RadioSetting("wx_alert", "WX alert",
+                         RadioSettingValueBoolean(self.memobj.wx_alert)))
+            basic.append(RadioSetting("wx_channel", "Current WX channel",
+                         RadioSettingValueList(WX_CHANNEL,
+                         WX_CHANNEL[self.memobj.wx_channel])))
+            basic.append(RadioSetting("comment", "Comment",
+                         RadioSettingValueString(0, COMMENT_LEN,
+                         str(self.memobj.comment),
+                         autopad = True, charset = CHARSET)))
+            basic.append(RadioSetting("tune_step", "Current tune step",
+                         RadioSettingValueList(TUNE_STEP_STR,
+                         TUNE_STEP_STR[self.memobj.tune_step])))
+            basic.append(RadioSetting("band_selected", "Selected band",
+                         RadioSettingValueInteger(0, BANDS - 1, self.memobj.band_selected)))
+            basic.append(RadioSetting("memory_display", "Memory display",
+                         RadioSettingValueList(MEMORY_DISPLAY,
+                         MEMORY_DISPLAY[self.memobj.memory_display])))
+            basic.append(RadioSetting("memory_name", "Memory name",
+                         RadioSettingValueBoolean(self.memobj.memory_name)))
+            basic.append(RadioSetting("dial_select", "Dial select",
+                         RadioSettingValueList(DIAL_SELECT,
+                         DIAL_SELECT[self.memobj.dial_select])))
+            basic.append(RadioSetting("power", "RF power",
+                         RadioSettingValueList(POWER,
+                         POWER[self.memobj.power])))
+            basic.append(RadioSetting("vfo", "Current VFO",
+                         RadioSettingValueList(VFO,
+                         VFO[self.memobj.vfo])))
+            basic.append(RadioSetting("attenuator", "RF attenuator",
+                         RadioSettingValueBoolean(self.memobj.attenuator)))
+            basic.append(RadioSetting("skip_scan", "Skip scan",
+                         RadioSettingValueBoolean(self.memobj.skip_scan)))
+# TODO: this needs to be reverse engineered, because the following commented
+# code does not seem correct
+#            basic.append(RadioSetting("mode", "Current mode",
+#                         RadioSettingValueList(OPERATION_MODE,
+#                         OPERATION_MODE[self.memobj.mode])))
+            basic.append(RadioSetting("vfo_scan", "VFO scan",
+                         RadioSettingValueList(VFO_SCAN,
+                         VFO_SCAN[self.memobj.vfo_scan])))
+            basic.append(RadioSetting("memory_scan", "Memory scan",
+                         RadioSettingValueList(MEMORY_SCAN,
+                         MEMORY_SCAN[self.memobj.memory_scan])))
+            basic.append(RadioSetting("tv_channel", "Current TV channel",
+                         RadioSettingValueInteger(0, TV_CHANNELS - 1, self.memobj.tv_channel)))
 
             # DTMF auto dial
-            rs = RadioSetting("autodial", "Autodial",
-                              RadioSettingValueList(ICX90_AUTODIAL,
-                              ICX90_AUTODIAL[self.memobj.autodial]))
-            dtmf_autodial.append(rs)
-            rs = RadioSetting("dtmf_speed", "Speed",
-                              RadioSettingValueList(ICX90_DTMF_SPEED,
-                              ICX90_DTMF_SPEED[self.memobj.dtmf_speed]))
-            dtmf_autodial.append(rs)
+            dtmf_autodial.append(RadioSetting("autodial", "Autodial",
+                                 RadioSettingValueList(AUTODIAL,
+                                 AUTODIAL[self.memobj.autodial])))
+            dtmf_autodial.append(RadioSetting("dtmf_speed", "Speed",
+                                 RadioSettingValueList(DTMF_SPEED,
+                                 DTMF_SPEED[self.memobj.dtmf_speed])))
             for x in range(DTMF_AUTODIAL_NUM):
                 rs = RadioSetting("dtmf_codes[%d].dtmf_digits" % x, "DTMF autodial: %d" % x,
                                   RadioSettingValueString(0, DTMF_DIGITS_NUM,
@@ -507,78 +474,58 @@ class ICx90Radio(icf.IcomCloneModeRadio):
                 dtmf_autodial.append(rs)
 
             # expand 1
-            rs = RadioSetting("expand_1", "Expand 1",
-                              RadioSettingValueBoolean(self.memobj.expand_1))
-            expand1.append(rs)
-            rs = RadioSetting("scan_stop_beep", "Scan stop beep",
-                              RadioSettingValueBoolean(self.memobj.scan_stop_beep))
-            expand1.append(rs)
-            rs = RadioSetting("scan_stop_light", "Scan stop light",
-                              RadioSettingValueBoolean(self.memobj.scan_stop_light))
-            expand1.append(rs)
-            rs = RadioSetting("light_postion", "Light position",
-                              RadioSettingValueList(ICX90_LIGHT_POSITION,
-                              ICX90_LIGHT_POSITION[self.memobj.light_position]))
-            expand1.append(rs)
-            rs = RadioSetting("light_color", "Light color",
-                              RadioSettingValueList(ICX90_LIGHT_COLOR,
-                              ICX90_LIGHT_COLOR[self.memobj.light_color]))
-            expand1.append(rs)
-            rs = RadioSetting("band_edge_beep", "Band edge beep",
-                              RadioSettingValueBoolean(self.memobj.band_edge_beep))
-            expand1.append(rs)
-            rs = RadioSetting("auto_power_on", "Auto power on",
-                              RadioSettingValueList(ICX90_AUTO_POWER_ON,
-                              ICX90_AUTO_POWER_ON[self.memobj.auto_power_on]))
-            expand1.append(rs)
-            rs = RadioSetting("key_lock", "Key lock",
-                              RadioSettingValueList(ICX90_KEY_LOCK,
-                              ICX90_KEY_LOCK[self.memobj.key_lock]))
-            expand1.append(rs)
-            rs = RadioSetting("ptt_lock", "PTT lock",
-                              RadioSettingValueBoolean(self.memobj.ptt_lock))
-            expand1.append(rs)
-            rs = RadioSetting("lcd_contrast", "LCD contrast",
-                              RadioSettingValueList(ICX90_LCD_CONTRAST,
-                              ICX90_LCD_CONTRAST[self.memobj.lcd_contrast]))
-            expand1.append(rs)
-            rs = RadioSetting("opening_message", "Opening message",
-                              RadioSettingValueBoolean(self.memobj.opening_message))
-            expand1.append(rs)
-            rs = RadioSetting("opening_message_text", "Opening message",
-                              RadioSettingValueString(0, OPENING_MESSAGE_LEN,
-                              str(self.memobj.opening_message_text),
-                              autopad = True, charset = ICX90_CHARSET))
-            expand1.append(rs)
+            expand_1.append(RadioSetting("expand_1", "Expand 1",
+                            RadioSettingValueBoolean(self.memobj.expand_1)))
+            expand_1.append(RadioSetting("scan_stop_beep", "Scan stop beep",
+                            RadioSettingValueBoolean(self.memobj.scan_stop_beep)))
+            expand_1.append(RadioSetting("scan_stop_light", "Scan stop light",
+                            RadioSettingValueBoolean(self.memobj.scan_stop_light)))
+            expand_1.append(RadioSetting("light_postion", "Light position",
+                            RadioSettingValueList(LIGHT_POSITION,
+                            LIGHT_POSITION[self.memobj.light_position])))
+            expand_1.append(RadioSetting("light_color", "Light color",
+                            RadioSettingValueList(LIGHT_COLOR,
+                            LIGHT_COLOR[self.memobj.light_color])))
+            expand_1.append(RadioSetting("band_edge_beep", "Band edge beep",
+                            RadioSettingValueBoolean(self.memobj.band_edge_beep)))
+            expand_1.append(RadioSetting("auto_power_on", "Auto power on",
+                            RadioSettingValueList(AUTO_POWER_ON,
+                            AUTO_POWER_ON[self.memobj.auto_power_on])))
+            expand_1.append(RadioSetting("key_lock", "Key lock",
+                            RadioSettingValueList(KEY_LOCK,
+                            KEY_LOCK[self.memobj.key_lock])))
+            expand_1.append(RadioSetting("ptt_lock", "PTT lock",
+                            RadioSettingValueBoolean(self.memobj.ptt_lock)))
+            expand_1.append(RadioSetting("lcd_contrast", "LCD contrast",
+                            RadioSettingValueList(LCD_CONTRAST,
+                            LCD_CONTRAST[self.memobj.lcd_contrast])))
+            expand_1.append(RadioSetting("opening_message", "Opening message",
+                            RadioSettingValueBoolean(self.memobj.opening_message)))
+            expand_1.append(RadioSetting("opening_message_text", "Opening message",
+                            RadioSettingValueString(0, OPENING_MESSAGE_LEN,
+                            str(self.memobj.opening_message_text),
+                            autopad = True, charset = CHARSET)))
 
             # expand 2
-            rs = RadioSetting("expand_2", "Expand 2",
-                              RadioSettingValueBoolean(self.memobj.expand_2))
-            expand2.append(rs)
-            rs = RadioSetting("busy_lockout", "Busy lock out",
-                              RadioSettingValueBoolean(self.memobj.busy_lockout))
-            expand2.append(rs)
-            rs = RadioSetting("timeout_timer", "Timeout timer",
-                              RadioSettingValueList(ICX90_TIMEOUT_TIMER,
-                              ICX90_TIMEOUT_TIMER[self.memobj.timeout_timer]))
-            expand2.append(rs)
-            rs = RadioSetting("active_band", "Active band",
-                              RadioSettingValueList(ICX90_ACTIVE_BAND,
-                              ICX90_ACTIVE_BAND[self.memobj.active_band]))
-            expand2.append(rs)
-            rs = RadioSetting("fm_narrow", "FM narrow",
-                              RadioSettingValueBoolean(self.memobj.fm_narrow))
-            expand2.append(rs)
-            rs = RadioSetting("split", "Split",
-                              RadioSettingValueBoolean(self.memobj.split))
-            expand2.append(rs)
-            rs = RadioSetting("morse_code_enable", "Morse code synthesizer",
-                              RadioSettingValueBoolean(self.memobj.morse_code_enable))
-            expand2.append(rs)
-            rs = RadioSetting("morse_code_speed", "Morse code speed",
-                              RadioSettingValueList(ICX90_MORSE_CODE_SPEED,
-                              ICX90_MORSE_CODE_SPEED[self.memobj.morse_code_speed]))
-            expand2.append(rs)
+            expand_2.append(RadioSetting("expand_2", "Expand 2",
+                            RadioSettingValueBoolean(self.memobj.expand_2)))
+            expand_2.append(RadioSetting("busy_lockout", "Busy lock out",
+                            RadioSettingValueBoolean(self.memobj.busy_lockout)))
+            expand_2.append(RadioSetting("timeout_timer", "Timeout timer",
+                            RadioSettingValueList(TIMEOUT_TIMER,
+                            TIMEOUT_TIMER[self.memobj.timeout_timer])))
+            expand_2.append(RadioSetting("active_band", "Active band",
+                            RadioSettingValueList(ACTIVE_BAND,
+                            ACTIVE_BAND[self.memobj.active_band])))
+            expand_2.append(RadioSetting("fm_narrow", "FM narrow",
+                            RadioSettingValueBoolean(self.memobj.fm_narrow)))
+            expand_2.append(RadioSetting("split", "Split",
+                            RadioSettingValueBoolean(self.memobj.split)))
+            expand_2.append(RadioSetting("morse_code_enable", "Morse code synthesizer",
+                            RadioSettingValueBoolean(self.memobj.morse_code_enable)))
+            expand_2.append(RadioSetting("morse_code_speed", "Morse code speed",
+                            RadioSettingValueList(MORSE_CODE_SPEED,
+                            MORSE_CODE_SPEED[self.memobj.morse_code_speed])))
 
             return group
         except:
@@ -704,18 +651,18 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         else:
             mem.empty = False
             if special:
-                mem.name = " " * ICX90_NAME_LENGTH
+                mem.name = " " * NAME_LENGTH
             else:
                 mem.name = mem_item.name
             mem.rtone = chirp_common.TONES[(mem_item.tx_tone_hi << 4) + mem_item.tx_tone_lo]
             mem.ctone = chirp_common.TONES[mem_item.rx_tone]
             mem.dtcs = chirp_common.DTCS_CODES[mem_item.dtcs]
-            mem.dtcs_polarity = ICX90_DTCS_POLARITIES[mem_item.dtcs_polarity]
+            mem.dtcs_polarity = DTCS_POLARITY[mem_item.dtcs_polarity]
             mem.offset = self.freq_icom2chirp(mem_item.offset_freq, mem_item.offset_freq_mult)
-            mem.duplex = ICX90_DUPLEXES[mem_item.duplex]
-            mem.tmode = ICX90_TONE_MODES[mem_item.tone_mode]
-            mem_tuning_step = ICX90_TUNE_STEPS[mem_item.tune_step]
-            mem.mode = ICX90_MODES[mem_item.mode]
+            mem.duplex = DUPLEX[mem_item.duplex]
+            mem.tmode = TONE_MODE[mem_item.tone_mode]
+            mem_tuning_step = TUNE_STEP[mem_item.tune_step]
+            mem.mode = MODE[mem_item.mode]
             if not special:
                 mem.skip = self.get_skip(number)
         if special:
@@ -733,19 +680,19 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         else:
             (mem_item.freq, mem_item.freq_mult) = self.freq_chirp2icom(memory.freq)
             if special:
-                mem_item.name = " " * ICX90_NAME_LENGTH
+                mem_item.name = " " * NAME_LENGTH
             else:
                 mem_item.name = memory.name
             mem_item.tx_tone_hi = chirp_common.TONES.index(memory.rtone) >> 4
             mem_item.tx_tone_lo = chirp_common.TONES.index(memory.rtone) & 0x0f
             mem_item.rx_tone = chirp_common.TONES.index(memory.ctone)
             mem_item.dtcs = chirp_common.DTCS_CODES.index(memory.dtcs)
-            mem_item.dtcs_polarity = ICX90_DTCS_POLARITIES.index(memory.dtcs_polarity)
+            mem_item.dtcs_polarity = DTCS_POLARITY.index(memory.dtcs_polarity)
             (mem_item.offset_freq, mem_item.offset_freq_mult) = self.freq_chirp2icom(memory.offset)
-            mem_item.duplex = ICX90_DUPLEXES.index(memory.duplex)
-            mem_item.tone_mode = ICX90_TONE_MODES.index(memory.tmode)
-            mem_item.tune_step = ICX90_TUNE_STEPS.index(memory.tuning_step)
-            mem_item.mode = ICX90_MODES.index(memory.mode)
+            mem_item.duplex = DUPLEX.index(memory.duplex)
+            mem_item.tone_mode = TONE_MODE.index(memory.tmode)
+            mem_item.tune_step = TUNE_STEP.index(memory.tuning_step)
+            mem_item.mode = MODE.index(memory.mode)
             if not special:
                 self.set_skip(memory.number, memory.skip)
 
@@ -769,14 +716,14 @@ class ICx90Radio_tv(ICx90Radio):
         rf.has_tuning_step = False
         rf.has_comment = False
         rf.memory_bounds = (0, TV_CHANNELS - 1)
-        rf.valid_characters = ICX90_CHARSET
-        rf.valid_modes = list(ICX90_TV_MODES)
+        rf.valid_characters = CHARSET
+        rf.valid_modes = list(TV_MODE)
         rf.valid_tmodes = []
         rf.valid_duplexes = []
         rf.valid_tuning_steps = []
         rf.valid_bands = [(46750000, 957750000)]
         rf.valid_skips = ["", "S"]
-        rf.valid_name_length = ICX90_TV_NAME_LENGTH
+        rf.valid_name_length = TV_NAME_LENGTH
         rf.valid_special_chans = []
 
         return rf
@@ -815,7 +762,7 @@ class ICx90Radio_tv(ICx90Radio):
         else:
             mem.empty = False
             mem.name = mem_item.name
-            mem.mode = ICX90_TV_MODES[mem_item.mode]
+            mem.mode = TV_MODE[mem_item.mode]
             mem.skip = self.get_skip(number)
         mem.number = number
 
@@ -829,7 +776,7 @@ class ICx90Radio_tv(ICx90Radio):
         else:
             mem_item.freq = self.freq_chirp2icom(memory.freq)
             mem_item.name = memory.name
-            mem_item.mode = ICX90_TV_MODES.index(memory.mode)
+            mem_item.mode = TV_MODE.index(memory.mode)
             self.set_skip(memory.number, memory.skip)
 
 from chirp import memmap

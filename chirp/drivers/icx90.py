@@ -44,7 +44,7 @@ struct bank_item {
 };
 struct tv_mem_item {
   u8 fixed:7,
-     modulation:1;
+     mode:1;
   ul24 freq;
   char name[4];
 };
@@ -136,9 +136,6 @@ u8 wx_channel;
 char comment[16];
 """
 
-# in bytes
-MEM_ITEM_SIZE = 16
-
 import logging
 
 import icf
@@ -152,6 +149,10 @@ from chirp.settings import RadioSetting, RadioSettingGroup, \
 
 LOG = logging.getLogger(__name__)
 
+# in bytes
+MEM_ITEM_SIZE = 16
+TV_MEM_ITEM_SIZE = 8
+
 BANK_INDEXES = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "L", "N", "O",
                 "P", "Q", "R", "T", "U", "Y"]
 MEM_NUM = 500
@@ -162,16 +163,18 @@ DTMF_DIGITS_NUM = 16
 OPENING_MESSAGE_LEN = 6
 COMMENT_LEN = 16
 BANDS=10
-TV_CHANNELS=69
+TV_CHANNELS=68
 
 ICX90_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()*+-,/|= "
 ICX90_NAME_LENGTH = 6
+ICX90_TV_NAME_LENGTH = 4
 ICX90_DUPLEXES = ["", "-", "+", ""]
 ICX90_DTCS_POLARITIES = ["NN", "NR", "RN", "RR"]
 ICX90_TONE_MODES = ["", "Tone", "TSQL", "DTCS"]
 ICX90_TUNE_STEPS = [5.0, 6.25, 8.33, 9.0, 10.0, 12.5, 15.0, 20.0, 25.0, 30.0, 50.0, 100.0, 200.0]
 ICX90_TUNE_STEPS_STR = list(map(lambda x: str(x), ICX90_TUNE_STEPS))
 ICX90_MODES = ["FM", "WFM", "AM"]
+ICX90_TV_MODES = ["WFM", "AM"]
 
 ICX90_SQUELCH_LEVELS = ["Open", "Auto", "Level 1", "Level 2", "Level 3", "Level 4", "Level 5",
                         "Level 6", "Level 7", "Level 8", "Level 9"]
@@ -279,6 +282,10 @@ class ICx90Radio(icf.IcomCloneModeRadio):
           self.special_add("VFO B: %d" % x, "vfo_b", x, i)
           i += 1
 
+    def get_sub_devices(self):
+        # this is needed because sub devices must be of a child class
+        return [ICx90Radio(self._mmap), ICx90Radio_tv(self._mmap)]
+
     # it seems the bank driver has different terminology about bank number and index
     # so in fact _get_bank and _set_bank are about indexes (i.e index in the array
     # of bank names - A .. Y
@@ -301,15 +308,17 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         rf = chirp_common.RadioFeatures()
         rf.has_settings = True
         rf.has_name = True
-        rf.has_bank = False
+        rf.has_bank = True
         rf.has_bank_index = True
         rf.has_bank_names = False
         rf.can_delete = True
+        rf.has_ctone = False
         rf.has_dtcs = True
         rf.has_dtcs_polarity = True
         rf.has_tuning_step = True
         rf.has_comment = False
         rf.memory_bounds = (0, MEM_NUM - 1)
+        rf.has_sub_devices = True
 #        rf.valid_power_levels = [chirp_common.PowerLevel("High", watts = 5.0),
 #                                 chirp_common.PowerLevel("Low", watts = 0.5)]
         rf.valid_characters = ICX90_CHARSET
@@ -365,8 +374,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             expand1 = RadioSettingGroup("expand1", "Expand 1")
             expand2 = RadioSettingGroup("expand2", "Expand 2")
             dtmf_autodial = RadioSettingGroup("dtmf_autodial", "DTMF autodial")
-            tv = RadioSettingGroup("tv", "TV")
-            group = RadioSettings(basic, expand1, expand2, dtmf_autodial, tv)
+            group = RadioSettings(basic, expand1, expand2, dtmf_autodial)
 
             # basic
             rs = RadioSetting("mem_channel", "Current memory channel",
@@ -477,6 +485,9 @@ class ICx90Radio(icf.IcomCloneModeRadio):
                               RadioSettingValueList(ICX90_MEMORY_SCAN,
                               ICX90_MEMORY_SCAN[self.memobj.memory_scan]))
             basic.append(rs)
+            rs = RadioSetting("tv_channel", "Current TV channel",
+                              RadioSettingValueInteger(0, TV_CHANNELS - 1, self.memobj.tv_channel))
+            basic.append(rs)
 
             # DTMF auto dial
             rs = RadioSetting("autodial", "Autodial",
@@ -569,11 +580,6 @@ class ICx90Radio(icf.IcomCloneModeRadio):
                               ICX90_MORSE_CODE_SPEED[self.memobj.morse_code_speed]))
             expand2.append(rs)
 
-            # TV
-            rs = RadioSetting("tv_channel", "Current TV channel",
-                              RadioSettingValueInteger(0, TV_CHANNELS - 1, self.memobj.tv_channel))
-            tv.append(rs)
-
             return group
         except:
             import traceback
@@ -621,16 +627,13 @@ class ICx90Radio(icf.IcomCloneModeRadio):
                 raise
 
     def process_mmap(self):
-        self.memobj = bitwise.parse(ICX90_MEM_FORMAT, self.mmap)
+        self.memobj = bitwise.parse(ICX90_MEM_FORMAT, self._mmap)
 
     def get_raw_memory(self, number):
         return repr(self.memobj.memory[number])
 
     def sync_in(self):
-#        self._get_type()
-#        icf.IcomCloneModeRadio.sync_in(self)
-#        self.mmap[0x1930] = self._isuhf and 1 or 0
-        self.mmap = icf.read_file("/var/tmp/ice90u.icf")[1]
+        self._mmap = icf.read_file("/var/tmp/ice90u.icf")[1]
         self.process_mmap()
 
     def sync_out(self):
@@ -724,7 +727,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         return mem
 
     def set_memory(self, memory):
-        (mem_item, special, unique_idx) = self.get_mem_item(number)
+        (mem_item, special, unique_idx) = self.get_mem_item(memory.number)
         if memory.empty:
             mem_item.set_raw("\x00" * MEM_ITEM_SIZE)
         else:
@@ -744,10 +747,90 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             mem_item.tune_step = ICX90_TUNE_STEPS.index(memory.tuning_step)
             mem_item.mode = ICX90_MODES.index(memory.mode)
             if not special:
-                self.set_skip(number, memory.skip)
+                self.set_skip(memory.number, memory.skip)
 
     def get_bank_model(self):
         return ICx90BankModel(self)
+
+class ICx90Radio_tv(ICx90Radio):
+    VARIANT = "TV"
+
+    def get_features(self):
+        rf = chirp_common.RadioFeatures()
+        rf.has_settings = True
+        rf.has_name = True
+        rf.has_bank = False
+        rf.has_bank_index = False
+        rf.has_bank_names = False
+        rf.can_delete = True
+        rf.has_ctone = False
+        rf.has_dtcs = False
+        rf.has_dtcs_polarity = False
+        rf.has_tuning_step = False
+        rf.has_comment = False
+        rf.memory_bounds = (0, TV_CHANNELS - 1)
+        rf.valid_characters = ICX90_CHARSET
+        rf.valid_modes = list(ICX90_TV_MODES)
+        rf.valid_tmodes = []
+        rf.valid_duplexes = []
+        rf.valid_tuning_steps = []
+        rf.valid_bands = [(46750000, 957750000)]
+        rf.valid_skips = ["", "S"]
+        rf.valid_name_length = ICX90_TV_NAME_LENGTH
+        rf.valid_special_chans = []
+
+        return rf
+
+    def get_bank_model(self):
+        return None
+
+    def freq_chirp2icom(self, freq):
+        return freq / 5000
+
+    def freq_icom2chirp(self, freq):
+        return freq * 5000
+
+    def get_skip(self, number):
+        if self.memobj.tv_channel_skip[number] == 2:
+            return "S"
+        return ""
+
+    def set_skip(self, number, skip):
+        skip_item = self.memobj.tv_channel_skip[number]
+        if skip == "S":
+            skip_item = 2
+        elif skip == "":
+            skip_item = 0
+        else:
+            raise errors.InvalidDataError("skip '%s' not supported" % skip)
+
+    def get_memory(self, number):
+        mem = chirp_common.Memory()
+
+        mem_item = self.memobj.tv_memory[number]
+
+        mem.freq = self.freq_icom2chirp(mem_item.freq)
+        if self.memobj.tv_channel_skip[number] == 1:
+            mem.empty = True
+        else:
+            mem.empty = False
+            mem.name = mem_item.name
+            mem.mode = ICX90_TV_MODES[mem_item.mode]
+            mem.skip = self.get_skip(number)
+        mem.number = number
+
+        return mem
+
+    def set_memory(self, memory):
+        mem_item = self.memobj.tv_memory[memory.number]
+        if memory.empty:
+            self.memobj.tv_channel_skip[number] = 1
+            mem_item.set_raw("\x00" * TV_MEM_ITEM_SIZE)
+        else:
+            mem_item.freq = self.freq_chirp2icom(memory.freq)
+            mem_item.name = memory.name
+            mem_item.mode = ICX90_TV_MODES.index(memory.mode)
+            self.set_skip(memory.number, memory.skip)
 
 from chirp import memmap
 

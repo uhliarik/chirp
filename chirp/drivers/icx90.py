@@ -111,7 +111,7 @@ u8 morse_code_speed;
 u8 unknown_16[22];
 char opening_message_text[6];
 u8 unknown_17[186];
-u8 unknown_18: 4,
+u8 unknown_18:4,
    tune_step:4;
 u8 unknown_19[4];
 u8 band_selected;
@@ -124,9 +124,9 @@ u8 memory_display:1,
    attenuator:1,
    unknown_21:2;
 u8 unknown_22[2];
-u8 mode:4
+u8 mode:4,
    unknown_23:4;
-u8 unknown_24;
+u8 unknown_24[9];
 char alpha_tag[6];
 u8 vfo_scan;
 u8 memory_scan;
@@ -358,15 +358,6 @@ class ICx90Radio(icf.IcomCloneModeRadio):
     def apply_dtmf_autodial(self, setting, obj):
         obj = self.dtmf_chirp2icom(setting.value)
 
-    def wx_channel_icom2chirp(self, val):
-        return ICX90_WX_CHANNEL[val] if val < 10 else ICX90_WX_CHANNEL[-1]
-
-    def wx_channel_chirp2icom(self, val):
-        return 0x43 if val >= 10 else val
-
-    def apply_wx_channel(self, setting, obj):
-        obj = self.wx_channel_chirp2icom(setting.value)
-
     def get_settings(self):
         try:
             _squelch = 1
@@ -435,16 +426,13 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             basic.append(rs)
             rs = RadioSetting("wx_channel", "Current WX channel",
                               RadioSettingValueList(ICX90_WX_CHANNEL,
-                              self.wx_channel_icom2chirp(self.memobj.wx_channel)))
-            rs.set_apply_callback(self.apply_wx_channel, self.memobj.wx_channel)
+                              ICX90_WX_CHANNEL[self.memobj.wx_channel]))
             basic.append(rs)
-#            for x in range(16):
-#              print(self.memobj.comment[x])
-#            rs = RadioSetting("comment", "Comment",
-#                              RadioSettingValueString(0, COMMENT_LEN,
-#                              str(self.memobj.comment),
-#                              autopad = True, charset = ICX90_CHARSET))
-#            basic.append(rs)
+            rs = RadioSetting("comment", "Comment",
+                              RadioSettingValueString(0, COMMENT_LEN,
+                              str(self.memobj.comment),
+                              autopad = True, charset = ICX90_CHARSET))
+            basic.append(rs)
             rs = RadioSetting("tune_step", "Current tune step",
                               RadioSettingValueList(ICX90_TUNE_STEPS_STR,
                               ICX90_TUNE_STEPS_STR[self.memobj.tune_step]))
@@ -546,11 +534,11 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             rs = RadioSetting("opening_message", "Opening message",
                               RadioSettingValueBoolean(self.memobj.opening_message))
             expand1.append(rs)
-#            rs = RadioSetting("opening_message_text", "Opening message",
-#                              RadioSettingValueString(0, OPENING_MESSAGE_LEN,
-#                              self.memobj.opening_message_text,
-#                              autopad = True, charset = ICX90_CHARSET))
-#            expand1.append(rs)
+            rs = RadioSetting("opening_message_text", "Opening message",
+                              RadioSettingValueString(0, OPENING_MESSAGE_LEN,
+                              str(self.memobj.opening_message_text),
+                              autopad = True, charset = ICX90_CHARSET))
+            expand1.append(rs)
 
             # expand 2
             rs = RadioSetting("expand_2", "Expand 2",

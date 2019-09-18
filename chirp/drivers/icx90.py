@@ -116,13 +116,13 @@ u8 unknown_18:4,
 u8 unknown_19[4];
 u8 band_selected;
 u8 unknown_20[2];
-u8 memory_display:1,
-   memory_name:1,
-   dial_select:1,
-   power:1,
-   vfo:1,
+u8 unknown_21:2,
    attenuator:1,
-   unknown_21:2;
+   vfo:1,
+   power:1,
+   dial_select:1,
+   memory_name:1,
+   memory_display:1;
 u8 unknown_22[2];
 u8 mode:4,
    unknown_23:4;
@@ -311,7 +311,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         rf.has_bank_index = True
         rf.has_bank_names = False
         rf.can_delete = True
-        rf.has_ctone = False
+        rf.has_ctone = True
         rf.has_dtcs = True
         rf.has_dtcs_polarity = True
         rf.has_tuning_step = True
@@ -385,7 +385,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             basic.append(RadioSetting("scan_pause", "Scan pause",
                          RadioSettingValueList(SCAN_PAUSE,
                          SCAN_PAUSE[self.memobj.scan_pause])))
-            basic.append(RadioSetting("beep_volume", "Beep volume",
+            basic.append(RadioSetting("beep_volume", "Beep audio",
                          RadioSettingValueList(BEEP_VOLUME,
                          BEEP_VOLUME[self.memobj.beep_volume])))
             basic.append(RadioSetting("beep", "Operation beep",
@@ -420,7 +420,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             basic.append(RadioSetting("comment", "Comment",
                          RadioSettingValueString(0, COMMENT_LEN,
                          str(self.memobj.comment),
-                         autopad = True, charset = CHARSET)))
+                         autopad = True)))
             basic.append(RadioSetting("tune_step", "Current tune step",
                          RadioSettingValueList(TUNE_STEP_STR,
                          TUNE_STEP_STR[self.memobj.tune_step])))
@@ -661,7 +661,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             mem.offset = self.freq_icom2chirp(mem_item.offset_freq, mem_item.offset_freq_mult)
             mem.duplex = DUPLEX[mem_item.duplex]
             mem.tmode = TONE_MODE[mem_item.tone_mode]
-            mem_tuning_step = TUNE_STEP[mem_item.tune_step]
+            mem.tuning_step = TUNE_STEP[mem_item.tune_step]
             mem.mode = MODE[mem_item.mode]
             if not special:
                 mem.skip = self.get_skip(number)

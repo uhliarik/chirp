@@ -580,13 +580,12 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         return repr(self.memobj.memory[number])
 
     def sync_in(self):
-        self._mmap = icf.read_file("/var/tmp/ice90u.icf")[1]
+        icf.IcomCloneModeRadio.sync_in(self)
         self.process_mmap()
 
     def sync_out(self):
         self._get_type()
         icf.IcomCloneModeRadio.sync_out(self)
-        return
 
     def freq_chirp2icom(self, freq):
         if chirp_common.is_fractional_step(freq):
@@ -778,39 +777,3 @@ class ICx90Radio_tv(ICx90Radio):
             mem_item.name = memory.name
             mem_item.mode = TV_MODE.index(memory.mode)
             self.set_skip(memory.number, memory.skip)
-
-from chirp import memmap
-
-def _read(ser):
-    f2 = open("/var/tmp/clone3.bin", "w")
-    ser.sync_in()
-    for x in range(0, 11584):
-      f2.write(ser._mmap[x])
-
-def _write(ser):
-    f = open("/var/tmp/clone3.bin", "r")
-    addr = 0
-    ser._mmap = memmap.MemoryMap(chr(0x00) * 11584)
-    b = f.read(1)
-    while b != "":
-      ser._mmap[addr] = ord(b)
-      addr += 1
-      b = f.read(1)
-#    ser._mmap = icf.read_file("/var/tmp/ice90u.icf")[1]
-    ser.sync_out()
-
-def _read_icf(ser):
-    ser._mmap = icf.read_file("/var/tmp/ice90u.icf")[1]
-    f2 = open("/var/tmp/clone3.bin", "w")
-    for x in range(0, 11584):
-      f2.write(ser._mmap[x])
-
-def _test():
-    import serial
-    ser = ICx90Radio(serial.Serial(port=None,
-                                   baudrate=9600, timeout=0.1))
-    _read_icf(ser)
-    print(ser.get_index_bounds())
-
-if __name__ == "__main__":
-    _test()

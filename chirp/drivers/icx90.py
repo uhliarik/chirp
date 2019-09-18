@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2018-2019 Jaroslav Škarvada <jskarvad@redhat.com>
-# Based on icx8x code by Dan Smith <dsmith@danplanet.com>
+# Based on various code from the CHIRP
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

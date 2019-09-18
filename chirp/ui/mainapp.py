@@ -724,20 +724,19 @@ of file.
         LOG.debug("User selected %s %s on port %s" %
                   (rclass.VENDOR, rclass.MODEL, settings.port))
 
-#        try:
-#            ser = serial.Serial(port=settings.port,
-#                                baudrate=rclass.BAUD_RATE,
-#                                rtscts=rclass.HARDWARE_FLOW,
-#                                timeout=0.25)
-#            ser.flushInput()
-#        except serial.SerialException, e:
-#            d = inputdialog.ExceptionDialog(e)
-#            d.run()
-#            d.destroy()
-#            return
+        try:
+            ser = serial.Serial(port=settings.port,
+                                baudrate=rclass.BAUD_RATE,
+                                rtscts=rclass.HARDWARE_FLOW,
+                                timeout=0.25)
+            ser.flushInput()
+        except serial.SerialException, e:
+            d = inputdialog.ExceptionDialog(e)
+            d.run()
+            d.destroy()
+            return
 
-#        radio = settings.radio_class(ser)
-        radio = settings.radio_class(serial.Serial())
+        radio = settings.radio_class(ser)
 
         fn = tempfile.mktemp()
         if isinstance(radio, chirp_common.CloneModeRadio):

@@ -285,6 +285,10 @@ class ICx90Radio(icf.IcomCloneModeRadio):
     def get_sub_devices(self):
         return [ICx90Radio(self._mmap), ICx90Radio_tv(self._mmap)]
 
+    def clear_bank(self, loc):
+        self.memobj.banks[loc].bank_index = 0x9f
+        self.memobj.banks[loc].bank_channel = 0
+
     # it seems the bank driver has different terminology about bank number and index
     # so in fact _get_bank and _set_bank are about indexes (i.e index in the array
     # of bank names - A .. Y
@@ -294,7 +298,10 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         return i if i < BANK_INDEX_NUM else None
 
     def _set_bank(self, loc, bank):
-        self.memobj.banks[loc].bank_index = bank
+        if bank is None:
+            self.clear_bank(loc)
+        else:
+            self.memobj.banks[loc].bank_index = bank
 
     def _get_bank_index(self, loc):
         i = self.memobj.banks[loc].bank_channel
@@ -584,7 +591,6 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         self.process_mmap()
 
     def sync_out(self):
-        self._get_type()
         icf.IcomCloneModeRadio.sync_out(self)
 
     def freq_chirp2icom(self, freq):
@@ -676,6 +682,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         (mem_item, special, unique_idx) = self.get_mem_item(memory.number)
         if memory.empty:
             mem_item.set_raw("\x00" * MEM_ITEM_SIZE)
+            self.clear_bank(memory.number)
         else:
             (mem_item.freq, mem_item.freq_mult) = self.freq_chirp2icom(memory.freq)
             if special:

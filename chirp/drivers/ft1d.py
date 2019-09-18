@@ -122,12 +122,21 @@ struct {
   } message;
 } opening_message;
 
-#seekto 0x0e4a;
+#seekto 0x%04X; // FT-1D:0e4a, FT2D:094a
 struct {
   u8 memory[16];
 } dtmf[10];
 
 #seekto 0x154a;
+// These "channels" seem to actually be a structure:
+//  first five bits are flags
+//      0   Unused (1=entry is unused)
+//      1   SW Broadcast
+//      2   VHF Marine
+//      3   WX (weather)
+//      4   ? a mode? ?
+//  11 bits of index into frequency tables
+//
 struct {
     u16 channel[100];
 } bank_members[24];
@@ -449,6 +458,9 @@ class FT1BankModel(chirp_common.BankModel):
             for channel in self._channel_numbers_in_bank(bank):
                 chosen_bank[0] = bank.index
                 chosen_mr[0] = channel
+                if channel & 0x7000 != 0:
+                    # Ignore preset channels without comment DAR
+                    break
                 if not flags[channel].nosubvfo:
                     chosen_bank[1] = bank.index
                     chosen_mr[1] = channel
@@ -488,6 +500,10 @@ class FT1BankModel(chirp_common.BankModel):
         empty = 0
         for index, channel_number in enumerate(sorted(channels_in_bank)):
             _members.channel[index] = channel_number - 1
+            if channel_number & 0x7000 != 0:
+                LOG.warn("Bank %d uses Yaesu preset frequency id=%04X. "
+                         "Chirp cannot see or change that entry." % (
+                             bank.index, channel_number))
             empty = index + 1
         for index in range(empty, len(_members.channel)):
             _members.channel[index] = 0xFFFF
@@ -546,7 +562,8 @@ class FT1Radio(yaesu_clone.YaesuCloneModeRadio):
     _memsize = 130507
     _block_lengths = [10, 130497]
     _block_size = 32
-    _mem_params = (900,            # size of memories array
+    _mem_params = (0xe4a,          # location of DTMF storage
+                   900,            # size of memories array
                    900,            # size of flags array
                    0xFECA,         # APRS beacon metadata address.
                    60,             # Number of beacons stored.

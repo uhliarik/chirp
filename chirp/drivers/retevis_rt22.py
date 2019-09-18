@@ -125,10 +125,18 @@ def _rt22_enter_programming_mode(radio):
         _rt22_exit_programming_mode(radio)
         raise errors.RadioError("Error communicating with radio")
 
-    if not ident.startswith("P32073"):
-        _rt22_exit_programming_mode(radio)
-        LOG.debug(util.hexprint(ident))
-        raise errors.RadioError("Radio returned unknown identification string")
+    # check if ident is OK
+    itis = False
+    for fp in radio._fileid:
+        if fp in ident:
+            # got it!
+            itis = True
+
+            break
+
+    if itis is False:
+        LOG.debug("Incorrect model ID, got this:\n\n" + util.hexprint(ident))
+        raise errors.RadioError("Radio identification failed.")
 
     try:
         serial.write(CMD_ACK)
@@ -289,6 +297,7 @@ class RT22Radio(chirp_common.CloneModeRadio):
               ]
     _memsize = 0x0400
     _block_size = 0x40
+    _fileid = ["P32073", "P3" + "\x00\x00\x00" + "3"]
 
     def get_features(self):
         rf = chirp_common.RadioFeatures()
@@ -308,6 +317,7 @@ class RT22Radio(chirp_common.CloneModeRadio):
         rf.valid_duplexes = ["", "-", "+", "split", "off"]
         rf.valid_modes = ["NFM", "FM"]  # 12.5 KHz, 25 kHz.
         rf.memory_bounds = (1, 16)
+        rf.valid_tuning_steps = [2.5, 5., 6.25, 10., 12.5, 25.]
         rf.valid_bands = [(400000000, 520000000)]
 
         return rf

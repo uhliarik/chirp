@@ -18,6 +18,7 @@ class TestAdapterMeta(type):
 class TestAdapter(unittest.TestCase):
     RADIO_CLASS = None
     SOURCE_IMAGE = None
+    RADIO_INST = None
 
     def shortDescription(self):
         test = self.id().split('.')[-1].replace('test_', '').replace('_', ' ')
@@ -33,11 +34,16 @@ class TestAdapter(unittest.TestCase):
 
     def _runtest(self, test):
         tw = run_tests.TestWrapper(self.RADIO_CLASS,
-                                   self.testimage)
+                                   self.testimage,
+                                   dst=self.RADIO_INST)
         testcase = test(tw)
         testcase.prepare()
         try:
-            testcase.run()
+            failures = testcase.run()
+            if failures:
+                raise failures[0]
+        except run_tests.TestCrashError as e:
+            raise e.get_original_exception()
         except run_tests.TestSkippedError as e:
             raise unittest.SkipTest(str(e))
         finally:
@@ -73,7 +79,7 @@ def _get_sub_devices(rclass, testimage):
 
     rf = tw.do("get_features")
     if rf.has_sub_devices:
-        return [r.__class__ for r in tw.do("get_sub_devices")]
+        return tw.do("get_sub_devices")
     else:
         return [rclass]
 
@@ -91,9 +97,15 @@ def load_tests(loader, tests, pattern):
             class_name = 'TestCase_%s' % (
                 filter(lambda c: c.isalnum(),
                        device.get_name()))
+            if isinstance(device, type):
+                dst = None
+            else:
+                dst = device
+                device = device.__class__
             tc = TestAdapterMeta(
                 class_name, (TestAdapter,), dict(RADIO_CLASS=device,
-                                                 SOURCE_IMAGE=image))
+                                                 SOURCE_IMAGE=image,
+                                                 RADIO_INST=dst))
         suite.addTests(loader.loadTestsFromTestCase(tc))
 
     return suite

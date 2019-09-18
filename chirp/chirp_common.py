@@ -17,6 +17,7 @@ import base64
 import json
 import logging
 import math
+import sys
 from chirp import errors, memmap, CHIRP_VERSION
 
 LOG = logging.getLogger(__name__)
@@ -93,6 +94,9 @@ TUNING_STEPS = [
     # Need to fix drivers using this list as an index!
     9.0, 1.0, 2.5,
 ]
+# These are the default for RadioFeatures.valid_tuning_steps
+COMMON_TUNING_STEPS = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 50.0, 100.0]
+
 
 SKIP_VALUES = ["", "S", "P"]
 
@@ -729,6 +733,7 @@ class RadioFeatures:
         "has_sub_devices":      BOOLEAN,
         "memory_bounds":        (0, 0),
         "can_odd_split":        BOOLEAN,
+        "can_delete":           BOOLEAN,
 
         # D-STAR
         "requires_call_lists":  BOOLEAN,
@@ -827,7 +832,7 @@ class RadioFeatures:
                   "Supported tone squelch modes")
         self.init("valid_duplexes", ["", "+", "-"],
                   "Supported duplex modes")
-        self.init("valid_tuning_steps", list(TUNING_STEPS),
+        self.init("valid_tuning_steps", list(COMMON_TUNING_STEPS),
                   "Supported tuning steps")
         self.init("valid_bands", [],
                   "Supported frequency ranges")
@@ -857,7 +862,8 @@ class RadioFeatures:
         self.init("can_odd_split", False,
                   "Indicates that the radio can store an independent " +
                   "transmit frequency")
-
+        self.init("can_delete", True,
+                  "Indicates that the radio can delete memories")
         self.init("requires_call_lists", True,
                   "[D-STAR] Indicates that the radio requires all callsigns " +
                   "to be in the master list and cannot be stored " +
@@ -1591,3 +1597,11 @@ def is_version_newer(version):
         my_version = (0,)
 
     return version > my_version
+
+
+def http_user_agent():
+    ver = sys.version_info
+    return 'chirp/%s (Python %i.%i.%i on %s)' % (
+        CHIRP_VERSION,
+        ver.major, ver.minor, ver.micro,
+        sys.platform)

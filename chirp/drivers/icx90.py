@@ -234,11 +234,22 @@ class ICx90BankModel(icf.IcomIndexedBankModel):
 
         return banks
 
+class ICT90_Alias(chirp_common.Alias):
+    VENDOR = "Icom"
+    MODEL = "IC-T90"
+
+class ICT90A_Alias(chirp_common.Alias):
+    VENDOR = "Icom"
+    MODEL = "IC-T90A"
+
+
 @directory.register
 class ICx90Radio(icf.IcomCloneModeRadio):
     """Icom IC-E/T90"""
     VENDOR = "Icom"
-    MODEL = "IC-E90/T90"
+    MODEL = "IC-E90"
+
+    ALIASES = [ICT90_Alias, ICT90A_Alias]
 
     _model = "\x25\x07\x00\x01"
     _memsize = 0x2d40
@@ -283,7 +294,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
           i += 1
 
     def get_sub_devices(self):
-        return [ICx90Radio(self._mmap), ICx90Radio_tv(self._mmap)]
+        return [ICx90Radio_ham(self._mmap), ICx90Radio_tv(self._mmap)]
 
     def clear_bank(self, loc):
         self.memobj.banks[loc].bank_index = 0x9f
@@ -352,7 +363,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         return ret
 
     def dtmf_chirp2icom(self, dtmf):
-        return "".join(map(self.map_dtmf_chirp2icom, str(dtmf)))
+        return "".join(map(self.map_dtmf_chirp2icom, str(dtmf).rjust(DTMF_DIGITS_NUM)))
 
     def map_dtmf_icom2chirp(self, item):
         item = ord(item)
@@ -584,7 +595,8 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         self.memobj = bitwise.parse(ICX90_MEM_FORMAT, self._mmap)
 
     def get_raw_memory(self, number):
-        return repr(self.memobj.memory[number])
+        (mem_item, special, unique_idx) = self.get_mem_item(number)
+        return repr(mem_item)
 
     def sync_in(self):
         icf.IcomCloneModeRadio.sync_in(self)
@@ -645,6 +657,10 @@ class ICx90Radio(icf.IcomCloneModeRadio):
         except KeyError:
             return (self.memobj.memory[number], False, number)
 
+    def get_raw_memory(self, number):
+        (mem_item, special, unique_idx) = self.get_mem_item(number)
+        return repr(mem_item)
+
     def get_memory(self, number):
         mem = chirp_common.Memory()
 
@@ -658,7 +674,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             if special:
                 mem.name = " " * NAME_LENGTH
             else:
-                mem.name = mem_item.name
+                mem.name = str(mem_item.name).rstrip("\x00")
             mem.rtone = chirp_common.TONES[(mem_item.tx_tone_hi << 4) + mem_item.tx_tone_lo]
             mem.ctone = chirp_common.TONES[mem_item.rx_tone]
             mem.dtcs = chirp_common.DTCS_CODES[mem_item.dtcs]
@@ -688,7 +704,11 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             if special:
                 mem_item.name = " " * NAME_LENGTH
             else:
-                mem_item.name = memory.name
+                for x in range(NAME_LENGTH):
+                    try:
+                        mem_item.name[x] = str(memory.name[x])
+                    except IndexError:
+                        mem_item.name[x] = "\x00"
             mem_item.tx_tone_hi = chirp_common.TONES.index(memory.rtone) >> 4
             mem_item.tx_tone_lo = chirp_common.TONES.index(memory.rtone) & 0x0f
             mem_item.rx_tone = chirp_common.TONES.index(memory.ctone)
@@ -704,6 +724,14 @@ class ICx90Radio(icf.IcomCloneModeRadio):
 
     def get_bank_model(self):
         return ICx90BankModel(self)
+
+class ICx90Radio_ham(ICx90Radio):
+
+    def get_features(self):
+        rf = ICx90Radio.get_features(self)
+        rf.has_sub_devices = False
+
+        return rf
 
 class ICx90Radio_tv(ICx90Radio):
     VARIANT = "TV"
@@ -721,6 +749,7 @@ class ICx90Radio_tv(ICx90Radio):
         rf.has_dtcs_polarity = False
         rf.has_tuning_step = False
         rf.has_comment = False
+        rf.has_sub_devices = False
         rf.memory_bounds = (0, TV_CHANNELS - 1)
         rf.valid_characters = CHARSET
         rf.valid_modes = list(TV_MODE)
@@ -757,6 +786,9 @@ class ICx90Radio_tv(ICx90Radio):
         else:
             raise errors.InvalidDataError("skip '%s' not supported" % skip)
 
+    def get_raw_memory(self, number):
+        return repr(self.memobj.tv_memory[number])
+
     def get_memory(self, number):
         mem = chirp_common.Memory()
 
@@ -765,9 +797,10 @@ class ICx90Radio_tv(ICx90Radio):
         mem.freq = self.freq_icom2chirp(mem_item.freq)
         if self.memobj.tv_channel_skip[number] == 1:
             mem.empty = True
+            mem.mode = TV_MODE[0]
         else:
             mem.empty = False
-            mem.name = mem_item.name
+            mem.name = str(mem_item.name).rstrip("\x00")
             mem.mode = TV_MODE[mem_item.mode]
             mem.skip = self.get_skip(number)
         mem.number = number
@@ -777,10 +810,15 @@ class ICx90Radio_tv(ICx90Radio):
     def set_memory(self, memory):
         mem_item = self.memobj.tv_memory[memory.number]
         if memory.empty:
-            self.memobj.tv_channel_skip[number] = 1
+            self.memobj.tv_channel_skip[memory.number] = 1
             mem_item.set_raw("\x00" * TV_MEM_ITEM_SIZE)
         else:
             mem_item.freq = self.freq_chirp2icom(memory.freq)
-            mem_item.name = memory.name
+            for x in range(TV_NAME_LENGTH):
+                try:
+                    mem_item.name[x] = str(memory.name[x])
+                except IndexError:
+                    mem_item.name[x] = "\x00"
+
             mem_item.mode = TV_MODE.index(memory.mode)
             self.set_skip(memory.number, memory.skip)

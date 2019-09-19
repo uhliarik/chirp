@@ -608,10 +608,12 @@ class ICx90Radio(icf.IcomCloneModeRadio):
     def freq_chirp2icom(self, freq):
         if chirp_common.is_fractional_step(freq):
             mult = 6250
+            multr = 1
         else:
             mult = 5000
+            multr = 0
 
-        return (freq / mult, mult)
+        return (freq / mult, multr)
 
     def freq_icom2chirp(self, freq, mult):
         return freq * (6250 if mult else 5000)
@@ -666,11 +668,12 @@ class ICx90Radio(icf.IcomCloneModeRadio):
 
         (mem_item, special, unique_idx) = self.get_mem_item(number)
 
-        mem.freq = self.freq_icom2chirp(mem_item.freq, mem_item.freq_mult)
-        if mem.freq == 0:
+        freq = self.freq_icom2chirp(mem_item.freq, mem_item.freq_mult)
+        if freq == 0:
             mem.empty = True
         else:
             mem.empty = False
+            mem.freq = freq
             if special:
                 mem.name = " " * NAME_LENGTH
             else:
@@ -754,7 +757,7 @@ class ICx90Radio_tv(ICx90Radio):
         rf.valid_characters = CHARSET
         rf.valid_modes = list(TV_MODE)
         rf.valid_tmodes = []
-        rf.valid_duplexes = []
+        rf.valid_duplexes = [""]
         rf.valid_tuning_steps = []
         rf.valid_bands = [(46750000, 957750000)]
         rf.valid_skips = ["", "S"]
@@ -778,11 +781,10 @@ class ICx90Radio_tv(ICx90Radio):
         return ""
 
     def set_skip(self, number, skip):
-        skip_item = self.memobj.tv_channel_skip[number]
         if skip == "S":
-            skip_item = 2
+            self.memobj.tv_channel_skip[number] = 2
         elif skip == "":
-            skip_item = 0
+            self.memobj.tv_channel_skip[number] = 0
         else:
             raise errors.InvalidDataError("skip '%s' not supported" % skip)
 

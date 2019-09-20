@@ -677,7 +677,7 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             if special:
                 mem.name = " " * NAME_LENGTH
             else:
-                mem.name = str(mem_item.name).rstrip("\x00")
+                mem.name = str(mem_item.name).rstrip("\x00 ")
             mem.rtone = chirp_common.TONES[(mem_item.tx_tone_hi << 4) + mem_item.tx_tone_lo]
             mem.ctone = chirp_common.TONES[mem_item.rx_tone]
             mem.dtcs = chirp_common.DTCS_CODES[mem_item.dtcs]
@@ -802,7 +802,7 @@ class ICx90Radio_tv(ICx90Radio):
             mem.mode = TV_MODE[0]
         else:
             mem.empty = False
-            mem.name = str(mem_item.name).rstrip("\x00")
+            mem.name = str(mem_item.name).rstrip("\x00 ")
             mem.mode = TV_MODE[mem_item.mode]
             mem.skip = self.get_skip(number)
         mem.number = number

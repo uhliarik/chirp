@@ -250,13 +250,12 @@ class ICx90Radio(icf.IcomCloneModeRadio):
 
     _model = "\x25\x07\x00\x01"
     _memsize = 0x2d40
-    _endframe = "Icom Inc\x2e\xfd"
+    _endframe = "Icom Inc."
 
     _ranges = [(0x0000, 0x2d40, 32)]
     _num_banks = BANKS
     _bank_index_bounds = (0, BANK_NUM - 1)
     _can_hispeed = False
-    _check_clone_status = False
 
     def __init__(self, pipe):
         icf.IcomCloneModeRadio.__init__(self, pipe)

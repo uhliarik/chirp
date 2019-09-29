@@ -183,6 +183,7 @@ def send_clone_frame(radio, cmd, data, raw=False, checksum=False):
         pass
 
     radio.pipe.write(frame)
+    get_clone_resp(radio.pipe)
 
     return frame
 
@@ -359,22 +360,18 @@ def _clone_to_radio(radio):
         SAVE_PIPE.close()
         SAVE_PIPE = None
 
-    if radio._check_clone_status:
-        for i in range(0, 10):
-            try:
-                frames += stream.get_frames(True)
-                result = frames[-1]
-            except IndexError:
-                LOG.debug("Waiting for clone result...")
-                time.sleep(0.5)
+    for i in range(0, 10):
+        try:
+            frames += stream.get_frames(True)
+            result = frames[-1]
+        except IndexError:
+            LOG.debug("Waiting for clone result...")
+            time.sleep(0.5)
 
-        if len(frames) == 0:
-            raise errors.RadioError("Did not get clone result from radio")
-        res = result.payload[0] == '\x00'
-    else:
-        res = True
+    if len(frames) == 0:
+        raise errors.RadioError("Did not get clone result from radio")
 
-    return res
+    return result.payload[0] == '\x00'
 
 
 def clone_to_radio(radio):
@@ -578,7 +575,6 @@ class IcomCloneModeRadio(chirp_common.CloneModeRadio):
     _bank_index_bounds = (0, 99)
     _bank_class = IcomBank
     _can_hispeed = False
-    _check_clone_status = True
 
     @classmethod
     def is_hispeed(cls):

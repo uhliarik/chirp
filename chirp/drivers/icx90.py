@@ -15,6 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+
+import icf
+import struct
+from chirp import chirp_common, bitwise, errors, directory
+from chirp.memmap import MemoryMap
+from chirp.settings import RadioSetting, RadioSettingGroup, \
+    RadioSettingValueInteger, RadioSettingValueList, \
+    RadioSettingValueBoolean, RadioSettingValueString, \
+    RadioSettingValueFloat, InvalidValueError, RadioSettings
+import argparse
+
 ICX90_MEM_FORMAT = """
 struct mem_item {
   ul24 freq;
@@ -136,17 +148,6 @@ u8 wx_channel;
 char comment[16];
 """
 
-import logging
-
-import icf
-import struct
-from chirp import chirp_common, bitwise, errors, directory
-from chirp.memmap import MemoryMap
-from chirp.settings import RadioSetting, RadioSettingGroup, \
-    RadioSettingValueInteger, RadioSettingValueList, \
-    RadioSettingValueBoolean, RadioSettingValueString, \
-    RadioSettingValueFloat, InvalidValueError, RadioSettings
-
 LOG = logging.getLogger(__name__)
 
 # in bytes
@@ -156,6 +157,7 @@ TV_MEM_ITEM_SIZE = 8
 BANK_INDEX = ["A", "B", "C", "D", "E", "F", "G", "H", "J", "L", "N", "O",
               "P", "Q", "R", "T", "U", "Y"]
 MEM_NUM = 500
+BANKS = 18
 BANK_NUM = 100
 BANK_INDEX_NUM = len(BANK_INDEX)
 DTMF_AUTODIAL_NUM = 10
@@ -238,25 +240,20 @@ class ICT90_Alias(chirp_common.Alias):
     VENDOR = "Icom"
     MODEL = "IC-T90"
 
-class ICT90A_Alias(chirp_common.Alias):
-    VENDOR = "Icom"
-    MODEL = "IC-T90A"
-
-
 @directory.register
 class ICx90Radio(icf.IcomCloneModeRadio):
     """Icom IC-E/T90"""
     VENDOR = "Icom"
     MODEL = "IC-E90"
 
-    ALIASES = [ICT90_Alias, ICT90A_Alias]
+    ALIASES = [ICT90_Alias]
 
     _model = "\x25\x07\x00\x01"
     _memsize = 0x2d40
     _endframe = "Icom Inc\x2e\xfd"
 
     _ranges = [(0x0000, 0x2d40, 32)]
-    _num_banks = 18
+    _num_banks = BANKS
     _bank_index_bounds = (0, BANK_NUM - 1)
     _can_hispeed = False
     _check_clone_status = False
@@ -824,3 +821,89 @@ class ICx90Radio_tv(ICx90Radio):
 
             mem_item.mode = TV_MODE.index(memory.mode)
             self.set_skip(memory.number, memory.skip)
+
+def dump_banks(icx90, template_file):
+    mb = icx90.get_features().memory_bounds
+    with open(template_file, "w") as f:
+        for mi in range(mb[0], mb[1] + 1):
+            mem = icx90.get_memory(mi)
+            bank = icx90._get_bank(mi)
+            if bank is not None:
+                bank = BANK_INDEX[bank]
+            bank_pos = icx90._get_bank_index(mi)
+            if not mem.empty and bank is not None and bank_pos is not None:
+                f.write("%s;%s;%d\n" % (mem.name, bank, bank_pos))
+
+def read_template_file(template_file):
+    banks_templ = {}
+    with open(template_file, "r") as f:
+        for line in f:
+            l = line.split(";")
+            l[1] = BANK_INDEX.index(l[1])
+            banks_templ[l[0]] = l[1:]
+    return banks_templ
+
+def reorder_banks(icx90, preserve_position, preserve_unknown, banks_templ):
+    banks_cnt = []
+    mb = icx90.get_features().memory_bounds
+    for i in range(0, BANKS):
+        banks_cnt.append(0)
+    for mi in range(mb[0], mb[1] + 1):
+        mem = icx90.get_memory(mi)
+        if preserve_unknown:
+            bank = icx90._get_bank(mi)
+            bank_pos = icx90._get_bank_index(mi)
+        else:
+            bank = None
+            bank_pos = 0
+        if not mem.empty:
+            if mem.name in banks_templ:
+                bank = int(banks_templ[mem.name][0])
+                if preserve_position:
+                    bank_pos = int(banks_templ[mem.name][1])
+                else:
+                    bank_pos = banks_cnt[bank]
+                    banks_cnt[bank] += 1
+                print("%s\t-> %s, %02d" % (mem.name, BANK_INDEX[bank], bank_pos))
+        if bank >= BANKS or bank_pos >= BANK_NUM:
+            bank = None
+            bank_pos = 0
+        icx90._set_bank(mi, bank)
+        icx90._set_bank_index(mi, bank_pos)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Icom IC-E90 banks handling helper.")
+    parser.add_argument("icx90_img_file", help="IC-X90 IMG file.")
+    parser.add_argument("template_file", help="Banks template file.")
+    parser.add_argument("-r", "--read-banks", action="store_true",
+                        help="Read banks content and store it to template file.")
+    parser.add_argument("-f", "--fix-banks", action="store_true",
+                        help="Fix banks content, reorder channels in banks according to the provided template file and write it to IMG file.")
+    parser.add_argument("-p", "--preserve-position", action="store_true",
+                        help="Preserve bank position as in the template file if possible, otherwise put channels to banks according their position in the memory.")
+    parser.add_argument("-u", "--preserve-unknown", action="store_true",
+                        help="Preserve channels in banks if they aren't in the template file and don't conflicts with the template file, otherwise remove them from the banks.")
+    parser.add_argument("-b", "--backup_img", action="store_true",
+                        help="Backup IMG file before changing it.")
+
+    args = vars(parser.parse_args())
+
+    options_ok = True
+    try:
+        icx90_img_file = str(args.pop("icx90_img_file"))
+        template_file = str(args.pop("template_file"))
+    except KeyError:
+        options_ok = False
+
+    if options_ok and (args["read_banks"] or args["fix_banks"]):
+        icx90 = ICx90Radio(icx90_img_file)
+        if args["read_banks"]:
+            dump_banks(icx90, template_file)
+        elif args["fix_banks"]:
+            banks_templ = read_template_file(template_file)
+            if args["backup_img"]:
+                icx90.save_mmap(icx90_img_file + ".bak")
+            reorder_banks(icx90, args["preserve_position"], args["preserve_unknown"], banks_templ)
+            icx90.save_mmap(icx90_img_file)
+    else:
+        parser.print_help()

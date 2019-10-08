@@ -309,6 +309,8 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             self.clear_bank(loc)
         else:
             self.memobj.banks[loc].bank_index = bank
+            # it seems that unknown_4 if set to 1 makes the channel invisible (deleted?)
+            self.memobj.banks[loc].unknown_4 = 0
 
     def _get_bank_index(self, loc):
         i = self.memobj.banks[loc].bank_channel
@@ -703,6 +705,10 @@ class ICx90Radio(icf.IcomCloneModeRadio):
             if special:
                 mem_item.name = " " * NAME_LENGTH
             else:
+                # it seems that unknown_4 if set to 1 makes the channel invisible (deleted?)
+                # so set it explicitly to 0
+                self.memobj.banks[memory.number].unknown_4 = 0
+
                 for x in range(NAME_LENGTH):
                     try:
                         mem_item.name[x] = str(memory.name[x])
